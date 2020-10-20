@@ -3,8 +3,8 @@ from Auto_Augment.core.util.augmentation_2d import *
 import tensorflow as tf
 import numpy as np
 import random
-
 import matplotlib.pyplot as plt
+
 
 def get_mnist():
     (x_train, y_train), (x_test, y_test) = tf.keras.datasets.fashion_mnist.load_data()
@@ -40,8 +40,10 @@ class ConvClassifier(tf.keras.Model):
         super(ConvClassifier, self).__init__()
         self.model_layers = [
             tf.keras.layers.InputLayer(input_shape=(28, 28, 1), batch_size=32),
+            tf.keras.layers.Conv2D(16, (3, 3), padding='same'),
             tf.keras.layers.Conv2D(8, (3, 3), padding='same'),
             tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(1, 1), padding='valid'),
+            tf.keras.layers.Conv2D(16, (3, 3), padding='same'),
             tf.keras.layers.Conv2D(8, (3, 3), padding='same'),
             tf.keras.layers.Flatten(),
             tf.keras.layers.Dense(64,activation='relu'),
@@ -118,17 +120,35 @@ def supervised_train_loop(model, train, val, batch_size=32, epochs=20):
         train_val_acc_results.append(epoch_val_acc.result())
 
         tf.print(f"Loss: {train_loss_results[-1]:.3f}, Val Loss: {train_val_loss_results[-1]:.3f}, Acc: {train_acc_results[-1]:.3f}, Val Acc: {train_val_acc_results[-1]:.3f}")
+    return train_loss_results, train_val_loss_results, train_acc_results, train_val_acc_results
 
 
 def augmentation_policy(x, y):
     x, y = apply_random_left_right_flip(x, y)
-    x, y = apply_random_up_down_flip(x, y)
-    x, y = apply_random_brightness(x, y)
-    x, y = apply_random_contrast(x, y)
+    # x, y = apply_random_up_down_flip(x, y)
+    # x, y = apply_random_shear(x, y)
+    # x, y = apply_random_zoom(x, y)
+    # x, y = apply_random_brightness(x, y)
+    # x, y = apply_random_contrast(x, y)
     return x, y
 
 
 if __name__ == "__main__":
     train, val, test = get_mnist()
     model = get_and_compile_model(ConvClassifier)
-    supervised_train_loop(model, train, val, 32, 20)
+    loss, val_loss, acc, val_acc = supervised_train_loop(model, train, val, 32, 20)
+
+    fig, axes = plt.subplots(2, sharex=True, figsize=(12, 8))
+    fig.suptitle('Training History')
+
+    axes[0].set_ylabel("Loss", fontsize=14)
+    axes[0].plot(loss, label='loss')
+    axes[0].plot(val_loss, label='val loss')
+    axes[0].legend()
+
+    axes[1].set_ylabel("Accuracy", fontsize=14)
+    axes[1].set_xlabel("Epoch", fontsize=14)
+    axes[1].plot(acc, label='acc')
+    axes[1].plot(val_acc, label='val acc')
+    axes[1].legend()
+    plt.show()

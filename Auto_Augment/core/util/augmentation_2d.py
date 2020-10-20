@@ -21,8 +21,8 @@ def apply_random_shear(image_tensor, label_tensor, do_prob=1.0, magnitude=20.0):
     return image_tensor, label_tensor
 
 def apply_random_zoom(image_tensor, label_tensor, do_prob=1.0, magnitude=None):
-    # if tf.random.uniform(()) <= do_prob:
-    image_tensor = tf.image.random_crop(image_tensor, 0.9)
+    if tf.random.uniform(()) <= do_prob:
+        image_tensor = tf.image.random_crop(image_tensor, 0.9)
     return image_tensor, label_tensor
 
 def apply_random_contrast(image_tensor, label_tensor, do_prob=1.0, magnitude=None):
