@@ -4,6 +4,7 @@ import tensorflow as tf
 import numpy as np
 import random
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 
 def get_mnist():
@@ -39,15 +40,14 @@ class ConvClassifier(tf.keras.Model):
     def __init__(self):
         super(ConvClassifier, self).__init__()
         self.model_layers = [
-            tf.keras.layers.InputLayer(input_shape=(28, 28, 1), batch_size=32),
-            tf.keras.layers.Conv2D(16, (3, 3), padding='same'),
-            tf.keras.layers.Conv2D(8, (3, 3), padding='same'),
-            tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(1, 1), padding='valid'),
-            tf.keras.layers.Conv2D(16, (3, 3), padding='same'),
-            tf.keras.layers.Conv2D(8, (3, 3), padding='same'),
+            tf.keras.layers.InputLayer(input_shape=(28, 28, 1), batch_size=128),
+            # tf.keras.layers.Conv2D(16, (3, 3), padding='same'),
+            # tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(1, 1), padding='valid'),
+            # tf.keras.layers.Conv2D(16, (3, 3), padding='same'),
+            # tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(1, 1), padding='valid'),
             tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(64,activation='relu'),
-            tf.keras.layers.Dropout(0.1),
+            tf.keras.layers.Dense(128,activation='relu'),
+            # tf.keras.layers.Dropout(0.1),
             tf.keras.layers.Dense(10, activation='softmax')
         ]
     
@@ -61,7 +61,7 @@ def get_and_compile_model(model_func):
     model = model_func()
     model.compile(
         loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-        optimizer=tf.keras.optimizers.Adam(),
+        optimizer=tf.keras.optimizers.Adam(lr=1e-4),
         metrics=['accuracy'],
     )
     return model
@@ -96,7 +96,7 @@ def supervised_train_loop(model, train, val, batch_size=32, epochs=20):
     optimizer = model.optimizer
     loss = model.loss
 
-    for e in range(epochs):
+    for e in tqdm(range(epochs)):
         epoch_loss_avg = tf.keras.metrics.Mean()
         epoch_val_loss_avg = tf.keras.metrics.Mean()
         epoch_acc = tf.keras.metrics.SparseCategoricalAccuracy()
@@ -124,7 +124,7 @@ def supervised_train_loop(model, train, val, batch_size=32, epochs=20):
 
 
 def augmentation_policy(x, y):
-    x, y = apply_random_left_right_flip(x, y)
+    # x, y = apply_random_left_right_flip(x, y)
     # x, y = apply_random_up_down_flip(x, y)
     # x, y = apply_random_shear(x, y)
     # x, y = apply_random_zoom(x, y)
@@ -134,21 +134,42 @@ def augmentation_policy(x, y):
 
 
 if __name__ == "__main__":
+
     train, val, test = get_mnist()
-    model = get_and_compile_model(ConvClassifier)
-    loss, val_loss, acc, val_acc = supervised_train_loop(model, train, val, 32, 20)
+    train_ds = tf.data.Dataset.from_generator(data_generator, (tf.float32, tf.int32), args=(*train, 128, True))
+    val_ds = tf.data.Dataset.from_generator(data_generator, (tf.float32, tf.int32), args=(*val, 128, False))
 
-    fig, axes = plt.subplots(2, sharex=True, figsize=(12, 8))
-    fig.suptitle('Training History')
+    model = tf.keras.models.Sequential([
+        tf.keras.layers.Flatten(input_shape=(28, 28, 1)),
+        tf.keras.layers.Dense(128,activation='relu'),
+        tf.keras.layers.Dense(10, activation='softmax')
+    ])
+    model.compile(
+        loss='sparse_categorical_crossentropy',
+        optimizer=tf.keras.optimizers.Adam(0.001),
+        metrics=['accuracy'],
+    )
 
-    axes[0].set_ylabel("Loss", fontsize=14)
-    axes[0].plot(loss, label='loss')
-    axes[0].plot(val_loss, label='val loss')
-    axes[0].legend()
+    model.fit(
+        train_ds,
+        epochs=6,
+        validation_data=val_ds,
+    )
 
-    axes[1].set_ylabel("Accuracy", fontsize=14)
-    axes[1].set_xlabel("Epoch", fontsize=14)
-    axes[1].plot(acc, label='acc')
-    axes[1].plot(val_acc, label='val acc')
-    axes[1].legend()
-    plt.show()
+    # model = get_and_compile_model(ConvClassifier)
+    # loss, val_loss, acc, val_acc = supervised_train_loop(model, train, val, 32, 20)
+
+    # fig, axes = plt.subplots(2, sharex=True, figsize=(12, 8))
+    # fig.suptitle('Training History')
+
+    # axes[0].set_ylabel("Loss", fontsize=14)
+    # axes[0].plot(loss, label='loss')
+    # axes[0].plot(val_loss, label='val loss')
+    # axes[0].legend()
+
+    # axes[1].set_ylabel("Accuracy", fontsize=14)
+    # axes[1].set_xlabel("Epoch", fontsize=14)
+    # axes[1].plot(acc, label='acc')
+    # axes[1].plot(val_acc, label='val acc')
+    # axes[1].legend()
+    # plt.show()
