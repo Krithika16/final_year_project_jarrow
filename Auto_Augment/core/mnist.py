@@ -2,7 +2,6 @@ from Auto_Augment.core.util import set_memory_growth
 from Auto_Augment.core.util.augmentation_2d import *
 import tensorflow as tf
 import numpy as np
-import random
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
@@ -46,14 +45,14 @@ class ConvClassifier(tf.keras.Model):
             # tf.keras.layers.Conv2D(16, (3, 3), padding='same'),
             # tf.keras.layers.MaxPool2D(pool_size=(2, 2), strides=(1, 1), padding='valid'),
             tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(128,activation='relu'),
+            tf.keras.layers.Dense(128, activation='relu'),
             # tf.keras.layers.Dropout(0.1),
             tf.keras.layers.Dense(10, activation='softmax')
         ]
-    
+
     def call(self, x, training=False):
-        for l in self.model_layers:
-            x = l(x)
+        for lay in self.model_layers:
+            x = lay(x)
         return x
 
 
@@ -61,7 +60,7 @@ def get_and_compile_model(model_func):
     model = model_func()
     model.compile(
         loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-        optimizer=tf.keras.optimizers.Adam(lr=1e-4),
+        optimizer=tf.keras.optimizers.Adam(lr=0.001),
         metrics=['accuracy'],
     )
     return model
@@ -84,7 +83,7 @@ def val_step(model, inputs, targets, loss_func):
     return loss, pred
 
 
-def supervised_train_loop(model, train, val, batch_size=32, epochs=20):
+def supervised_train_loop(model, train, val, batch_size=128, epochs=20):
     train_loss_results = []
     train_val_loss_results = []
     train_acc_results = []
@@ -139,22 +138,25 @@ if __name__ == "__main__":
     train_ds = tf.data.Dataset.from_generator(data_generator, (tf.float32, tf.int32), args=(*train, 128, True))
     val_ds = tf.data.Dataset.from_generator(data_generator, (tf.float32, tf.int32), args=(*val, 128, False))
 
-    model = tf.keras.models.Sequential([
-        tf.keras.layers.Flatten(input_shape=(28, 28, 1)),
-        tf.keras.layers.Dense(128,activation='relu'),
-        tf.keras.layers.Dense(10, activation='softmax')
-    ])
-    model.compile(
-        loss='sparse_categorical_crossentropy',
-        optimizer=tf.keras.optimizers.Adam(0.001),
-        metrics=['accuracy'],
-    )
+    model = get_and_compile_model(ConvClassifier)
+    supervised_train_loop(model, train, val)
 
-    model.fit(
-        train_ds,
-        epochs=6,
-        validation_data=val_ds,
-    )
+    # model = tf.keras.models.Sequential([
+    #     tf.keras.layers.Flatten(input_shape=(28, 28, 1)),
+    #     tf.keras.layers.Dense(128,activation='relu'),
+    #     tf.keras.layers.Dense(10, activation='softmax')
+    # ])
+    # model.compile(
+    #     loss='sparse_categorical_crossentropy',
+    #     optimizer=tf.keras.optimizers.Adam(0.001),
+    #     metrics=['accuracy'],
+    # )
+
+    # model.fit(
+    #     train_ds,
+    #     epochs=6,
+    #     validation_data=val_ds,
+    # )
 
     # model = get_and_compile_model(ConvClassifier)
     # loss, val_loss, acc, val_acc = supervised_train_loop(model, train, val, 32, 20)
