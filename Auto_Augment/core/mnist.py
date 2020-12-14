@@ -1,14 +1,13 @@
-from Auto_Augment.core.util import set_memory_growth
 from Auto_Augment.core.util.supervised_loop import supervised_train_loop
 import tensorflow as tf
 import numpy as np
 
 
 
-def get_mnist(dataset=tf.keras.datasets.mnist.load_data):
+def get_mnist(dataset=tf.keras.datasets.mnist.load_data, val_split=0.01):
     (x_train, y_train), (x_test, y_test) = dataset()
     x_train, x_test = x_train[..., np.newaxis]/255.0, x_test[..., np.newaxis]/255.0
-    val_length = int(len(x_train) * 0.2)
+    val_length = int(len(x_train) * val_split)
     x_train, y_train = x_train[:-val_length, ...], y_train[:-val_length, ...]
     x_val, y_val = x_train[-val_length:, ...], y_train[-val_length:, ...]
 
@@ -25,7 +24,8 @@ def get_mnist(dataset=tf.keras.datasets.mnist.load_data):
 def data_generator(x, y, batch_size=32, train=True):
     x_len = len(x)
     idxes = np.array(list(range(x_len)))
-    np.random.shuffle(idxes)
+    if train:
+        np.random.shuffle(idxes)
     idx = 0
     while idx + batch_size < (x_len - 1):
         batch_idxes = idxes[idx: idx+batch_size]
@@ -50,17 +50,18 @@ class SimpleModel(tf.keras.Model):
         return x
 
 
-def get_and_compile_model(model_func):
+def get_and_compile_model(model_func, lr=0.001):
     model = model_func()
     model.compile(
         loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-        optimizer=tf.keras.optimizers.Adam(lr=0.001),
+        optimizer=tf.keras.optimizers.Adam(lr=lr),
         metrics=['accuracy'],
     )
     return model
 
 
 if __name__ == "__main__":
+    from Auto_Augment.core.util import set_memory_growth
     train, val, test = get_mnist()
     model = get_and_compile_model(SimpleModel)
-    supervised_train_loop(model, train, val, data_generator)
+    supervised_train_loop(model, train, test, data_generator)

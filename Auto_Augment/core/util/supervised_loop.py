@@ -1,8 +1,7 @@
 import tensorflow as tf
-from tqdm import tqdm
 
 
-@tf.function
+# @tf.function
 def train_step(model, inputs, targets, optimizer, loss_func):
     with tf.GradientTape() as tape:
         pred = model(inputs, training=True)
@@ -12,14 +11,15 @@ def train_step(model, inputs, targets, optimizer, loss_func):
     return loss, pred
 
 
-@tf.function
+# @tf.function
 def val_step(model, inputs, targets, loss_func):
     pred = model(inputs, training=False)
     loss = loss_func(targets, pred)
     return loss, pred
 
 
-def supervised_train_loop(model, train, val, data_generator, augmentation_policy=None, batch_size=128, epochs=20):
+def supervised_train_loop(model, train, val, data_generator, augmentation_policy=None,
+                          batch_size=128, epochs=20, debug=True):
     train_loss_results = []
     train_val_loss_results = []
     train_acc_results = []
@@ -31,12 +31,13 @@ def supervised_train_loop(model, train, val, data_generator, augmentation_policy
     optimizer = model.optimizer
     loss = model.loss
 
-    for e in tqdm(range(epochs)):
+    for e in range(epochs):
         epoch_loss_avg = tf.keras.metrics.Mean()
         epoch_val_loss_avg = tf.keras.metrics.Mean()
         epoch_acc = tf.keras.metrics.SparseCategoricalAccuracy()
         epoch_val_acc = tf.keras.metrics.SparseCategoricalAccuracy()
-        tf.print(f"{e+1:03d}/{epochs:03d}: ", end="")
+        if debug:
+            tf.print(f"{e+1:03d}/{epochs:03d}: ", end="")
 
         for x, y in train_ds:
             if augmentation_policy is not None:
@@ -54,6 +55,6 @@ def supervised_train_loop(model, train, val, data_generator, augmentation_policy
         train_val_loss_results.append(epoch_val_loss_avg.result())
         train_acc_results.append(epoch_acc.result())
         train_val_acc_results.append(epoch_val_acc.result())
-
-        tf.print(f"Loss: {train_loss_results[-1]:.3f}, Val Loss: {train_val_loss_results[-1]:.3f}, Acc: {train_acc_results[-1]:.3f}, Val Acc: {train_val_acc_results[-1]:.3f}")
+        if debug:
+            tf.print(f"Loss: {train_loss_results[-1]:.3f}, Val Loss: {train_val_loss_results[-1]:.3f}, Acc: {train_acc_results[-1]:.3f}, Val Acc: {train_val_acc_results[-1]:.3f}")
     return train_loss_results, train_val_loss_results, train_acc_results, train_val_acc_results
