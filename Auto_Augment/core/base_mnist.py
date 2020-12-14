@@ -1,6 +1,8 @@
 import tensorflow.compat.v2 as tf
 import tensorflow_datasets as tfds
 
+from Auto_Augment.core.mnist import SimpleModel
+
 tf.enable_v2_behavior()
 
 (ds_train, ds_test), ds_info = tfds.load(
@@ -10,8 +12,6 @@ tf.enable_v2_behavior()
     as_supervised=True,
     with_info=True,
 )
-
-print(type(ds_train))
 
 
 def normalize_img(image, label):
@@ -33,11 +33,9 @@ ds_test = ds_test.batch(128)
 ds_test = ds_test.cache()
 ds_test = ds_test.prefetch(tf.data.experimental.AUTOTUNE)
 
-model = tf.keras.models.Sequential([
-    tf.keras.layers.Flatten(input_shape=(28, 28, 1)),
-    tf.keras.layers.Dense(128, activation='relu'),
-    tf.keras.layers.Dense(10, activation='softmax')
-])
+
+model = SimpleModel()
+
 model.compile(
     loss='sparse_categorical_crossentropy',
     optimizer=tf.keras.optimizers.Adam(0.001),
