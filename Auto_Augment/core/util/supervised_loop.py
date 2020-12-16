@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 
-# @tf.function
+@tf.function
 def train_step(model, inputs, targets, optimizer, loss_func):
     with tf.GradientTape() as tape:
         pred = model(inputs, training=True)
@@ -11,7 +11,7 @@ def train_step(model, inputs, targets, optimizer, loss_func):
     return loss, pred
 
 
-# @tf.function
+@tf.function
 def val_step(model, inputs, targets, loss_func):
     pred = model(inputs, training=False)
     loss = loss_func(targets, pred)
