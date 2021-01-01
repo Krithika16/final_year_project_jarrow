@@ -25,9 +25,7 @@ if __name__ == "__main__":
     from Auto_Augment.core.util import set_memory_growth
     import time
 
-    t1 = time.time()
-    run_trial()
-    print(f'{time.time() - t1:.2f}')
+    train, val, test = get_mnist()
 
     analysis = tune.run(
         training_func,
