@@ -3,6 +3,7 @@ from Auto_Augment.augmentation_funcs.augmentation_2d import \
     apply_random_brightness, apply_random_left_right_flip, \
     apply_random_up_down_flip, apply_random_shear, apply_random_zoom, \
     apply_random_contrast
+import random
 
 
 class NoAugmentationPolicy(tf.keras.Model):
@@ -19,12 +20,12 @@ class RandomAugmentationPolicy(tf.keras.Model):
         super(RandomAugmentationPolicy, self).__init__()
         if image:
             self.augmentation_choices = [apply_random_brightness, apply_random_left_right_flip,
-                                         apply_random_up_down_flip, apply_random_shear, apply_random_zoom, \
-                                         apply_random_contrast]
+                                         apply_random_up_down_flip, apply_random_contrast]
         else:
             raise NotImplementedError()
 
     def call(self, inputs, training=False):
+        random.shuffle(self.augmentation_choices)
         x, y = inputs
         for aug in self.augmentation_choices:
             x, y = aug(x, y, do_prob=tf.random.uniform(()))
@@ -37,7 +38,7 @@ class FixAugmentationPolicy(tf.keras.Model):
         self.aug_args = aug_args
         if image:
             self.augmentation_choices = [apply_random_brightness, apply_random_left_right_flip,
-                                         apply_random_up_down_flip, apply_random_shear, apply_random_zoom, \
+                                         apply_random_up_down_flip,
                                          apply_random_contrast]
         else:
             raise NotImplementedError()

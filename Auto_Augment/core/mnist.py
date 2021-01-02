@@ -69,4 +69,8 @@ if __name__ == "__main__":
     model = get_and_compile_model(SimpleModel)
     t1 = time.time()
     supervised_train_loop(model, train, test, data_generator, epochs=5, augmentation_policy=NoAugmentationPolicy())
+    # supervised_train_loop(model, train, test, data_generator, epochs=5, augmentation_policy=FixAugmentationPolicy())
+    # supervised_train_loop(model, train, test, data_generator, epochs=5, augmentation_policy=RandomAugmentationPolicy())
     print(f'{time.time() - t1:.2f}')
+
+# todo: determine the magnitudes and probabilities that is optimal for random and fixed augmentation policy
