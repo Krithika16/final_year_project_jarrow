@@ -3,24 +3,28 @@ from Auto_Augment.augmentation_policies.baselines import \
     NoAugmentationPolicy, FixAugmentationPolicy, RandomAugmentationPolicy
 import tensorflow as tf
 import numpy as np
+import random
 
 
-def get_mnist(dataset=tf.keras.datasets.mnist.load_data, val_split=0.01, normalise_factor=255.0):
+def get_mnist(dataset=tf.keras.datasets.fashion_mnist.load_data, val_split=None, normalise_factor=255.0):
     (x_train, y_train), (x_test, y_test) = dataset()
     x_train = x_train[..., np.newaxis] / normalise_factor
     x_test = x_test[..., np.newaxis] / normalise_factor
-    val_length = int(len(x_train) * val_split)
-    x_train, y_train = x_train[:-val_length, ...], y_train[:-val_length, ...]
-    x_val, y_val = x_train[-val_length:, ...], y_train[-val_length:, ...]
+    if val_split is not None:
+        val_length = int(len(x_train) * val_split)
+        x_train, y_train = x_train[:-val_length, ...], y_train[:-val_length, ...]
+        x_val, y_val = x_train[-val_length:, ...], y_train[-val_length:, ...]
+        x_val = np.float32(x_val)
+    else:
+        x_val = y_val = None
 
     x_train = np.float32(x_train)
-    x_val = np.float32(x_val)
     x_test = np.float32(x_test)
 
     train = (x_train, y_train)
     val = (x_val, y_val)
     test = (x_test, y_test)
-    return train, test, val
+    return train, val, test
 
 
 def data_generator(x, y, batch_size=32, train=True):
@@ -67,10 +71,44 @@ if __name__ == "__main__":
     import time
     train, val, test = get_mnist()
     model = get_and_compile_model(SimpleModel)
-    t1 = time.time()
-    supervised_train_loop(model, train, test, data_generator, epochs=5, augmentation_policy=NoAugmentationPolicy())
-    # supervised_train_loop(model, train, test, data_generator, epochs=5, augmentation_policy=FixAugmentationPolicy())
-    # supervised_train_loop(model, train, test, data_generator, epochs=5, augmentation_policy=RandomAugmentationPolicy())
-    print(f'{time.time() - t1:.2f}')
+    
+
+    e = 15
+
+    def select_args():
+        probs_11 = [p/10 for p in range(11)]
+        probs_4 = [0.0, 0.1, 0.25, 0.5]
+        probs_3 = [0.0, 0.1, 0.2]
+        mags_7 = [p/10 for p in range(7)]
+        mags_shear = [p * 5 for p in range(5)]
+        mags_zoom = [p * 0.5 for p in range(5)]
+        return [
+            (random.choice(probs_11), random.choice(mags_7)),
+            (random.choice(probs_11), random.choice(mags_7)),
+            (random.choice(probs_4),),
+            (random.choice(probs_4),),
+            #(random.choice(probs_3), random.choice(mags_shear)),
+            #(random.choice(probs_3), random.choice(mags_zoom)),
+        ]
+
+    args = []
+    val_accs = []
+    for i in range(30):
+        print("EXPERIMENT:", i)
+        t1 = time.time()
+        if i < 3:
+            losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=NoAugmentationPolicy())
+            args.append(None)
+        else:
+            current_args = select_args()
+            print(current_args)
+            losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=FixAugmentationPolicy(current_args))
+            args.append(current_args)
+        print(f'Time: {time.time() - t1:.2f}s')
+        val_accs.append(val_accs[-1])
+
+    val_accs, args = zip(*sorted(zip(val_accs, args)))
+    for ar, va in zip(args, val_accs):
+        print(f"{va.numpy():.4f}", ar)
 
 # todo: determine the magnitudes and probabilities that is optimal for random and fixed augmentation policy

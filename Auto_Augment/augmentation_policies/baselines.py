@@ -1,8 +1,7 @@
 import tensorflow as tf
 from Auto_Augment.augmentation_funcs.augmentation_2d import \
-    apply_random_brightness, apply_random_left_right_flip, \
-    apply_random_up_down_flip, apply_random_shear, apply_random_zoom, \
-    apply_random_contrast
+    apply_random_brightness, apply_random_hue, apply_random_quality, apply_random_contrast, \
+    apply_random_left_right_flip, apply_random_up_down_flip, apply_random_shear, apply_random_zoom
 import random
 
 
@@ -19,8 +18,9 @@ class RandomAugmentationPolicy(tf.keras.Model):
     def __init__(self, apply_to_y=False, image=True):
         super(RandomAugmentationPolicy, self).__init__()
         if image:
-            self.augmentation_choices = [apply_random_brightness, apply_random_left_right_flip,
-                                         apply_random_up_down_flip, apply_random_contrast]
+            self.augmentation_choices = [apply_random_brightness, apply_random_contrast,
+                                         apply_random_left_right_flip, apply_random_up_down_flip,
+                                         apply_random_shear, apply_random_zoom]
         else:
             raise NotImplementedError()
 
@@ -37,9 +37,9 @@ class FixAugmentationPolicy(tf.keras.Model):
         super(FixAugmentationPolicy, self).__init__()
         self.aug_args = aug_args
         if image:
-            self.augmentation_choices = [apply_random_brightness, apply_random_left_right_flip,
-                                         apply_random_up_down_flip,
-                                         apply_random_contrast]
+            self.augmentation_choices = [apply_random_brightness, apply_random_contrast,
+                                         apply_random_left_right_flip, apply_random_up_down_flip]
+                                         #apply_random_shear, apply_random_zoom]
         else:
             raise NotImplementedError()
 

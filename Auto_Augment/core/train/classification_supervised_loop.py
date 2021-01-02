@@ -18,11 +18,20 @@ def val_step(model, inputs, targets, loss_func):
     return loss, pred
 
 
+def eval_loop(val_ds, model):
+    e_val_loss_avg = tf.keras.metrics.Mean()
+    e_val_acc = tf.keras.metrics.SparseCategoricalAccuracy()
+    loss = model.loss
+    for x, y in val_ds:
+        val_loss, val_pred = val_step(model, x, y, loss)
+        e_val_loss_avg.update_state(val_loss)
+        e_val_acc.update_state(y, val_pred)
+    return e_val_loss_avg.result(), e_val_acc.result()
+
+
 def epoch(train_ds, val_ds, model, augmentation_policy):
     e_loss_avg = tf.keras.metrics.Mean()
-    e_val_loss_avg = tf.keras.metrics.Mean()
     e_acc = tf.keras.metrics.SparseCategoricalAccuracy()
-    e_val_acc = tf.keras.metrics.SparseCategoricalAccuracy()
     optimizer = model.optimizer
     loss = model.loss
     for x, y in train_ds:
@@ -31,11 +40,8 @@ def epoch(train_ds, val_ds, model, augmentation_policy):
         tr_loss, tr_pred = train_step(model, x, y, optimizer, loss)
         e_loss_avg.update_state(tr_loss)
         e_acc.update_state(y, tr_pred)
-    for x, y in val_ds:
-        val_loss, val_pred = val_step(model, x, y, loss)
-        e_val_loss_avg.update_state(val_loss)
-        e_val_acc.update_state(y, val_pred)
-    return e_loss_avg.result(), e_val_loss_avg.result(), e_acc.result(), e_val_acc.result()
+    e_val_loss_avg, e_val_acc = eval_loop(val_ds, model, )
+    return e_loss_avg.result(), e_val_loss_avg, e_acc.result(), e_val_acc
 
 
 def supervised_train_loop(model, train, val, data_generator, augmentation_policy=None,
@@ -61,4 +67,8 @@ def supervised_train_loop(model, train, val, data_generator, augmentation_policy
         train_val_acc_results.append(e_val_acc)
         if debug:
             tf.print(f"Loss: {train_loss_results[-1]:.3f}, Val Loss: {train_val_loss_results[-1]:.3f}, Acc: {train_acc_results[-1]:.3f}, Val Acc: {train_val_acc_results[-1]:.3f}")
+
+            if e == (epochs - 1):
+                loss, acc = eval_loop(train_ds, model)
+                tf.print(f"No Aug Loss: {loss:.3f}, No Aug Acc: {acc:.3f}")
     return train_loss_results, train_val_loss_results, train_acc_results, train_val_acc_results
