@@ -30,7 +30,7 @@ def data_generator(x, y, batch_size=32, train=True):
         np.random.shuffle(idxes)
     idx = 0
     while idx + batch_size < (x_len - 1):
-        batch_idxes = idxes[idx: idx+batch_size]
+        batch_idxes = idxes[idx: idx + batch_size]
         x_ = x[batch_idxes]
         y_ = y[batch_idxes]
         yield (x_, y_)

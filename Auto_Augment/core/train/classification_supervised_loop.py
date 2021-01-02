@@ -53,7 +53,7 @@ def supervised_train_loop(model, train, val, data_generator, augmentation_policy
         if debug:
             tf.print(f"{e+1:03d}/{epochs:03d}: ", end="")
 
-        e_loss_avg, e_val_loss_avg, e_acc, e_val_acc = epoch(train_ds, val_ds, model, augmentation_policy) 
+        e_loss_avg, e_val_loss_avg, e_acc, e_val_acc = epoch(train_ds, val_ds, model, augmentation_policy)
 
         train_loss_results.append(e_loss_avg)
         train_val_loss_results.append(e_val_loss_avg)
