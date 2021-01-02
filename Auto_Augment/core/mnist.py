@@ -73,15 +73,15 @@ if __name__ == "__main__":
     model = get_and_compile_model(SimpleModel)
     
 
-    e = 15
+    e = 25
 
     def select_args():
         probs_11 = [p/10 for p in range(11)]
         probs_4 = [0.0, 0.1, 0.25, 0.5]
         probs_3 = [0.0, 0.1, 0.2]
         mags_7 = [p/10 for p in range(7)]
-        mags_shear = [p * 5 for p in range(5)]
-        mags_zoom = [p * 0.5 for p in range(5)]
+        # mags_shear = [p * 5 for p in range(5)]
+        # mags_zoom = [p * 0.5 for p in range(5)]
         return [
             (random.choice(probs_11), random.choice(mags_7)),
             (random.choice(probs_11), random.choice(mags_7)),
@@ -99,11 +99,14 @@ if __name__ == "__main__":
         if i < 3:
             losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=NoAugmentationPolicy())
             args.append(None)
+        elif i < 15:
+            fixed = FixAugmentationPolicy(select_args)
+            losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=fixed)
+            args.append(fixed.aug_args)
         else:
-            current_args = select_args()
-            print(current_args)
-            losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=FixAugmentationPolicy(current_args))
-            args.append(current_args)
+            rnd = RandomAugmentationPolicy(select_args)
+            losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=rnd)
+            args.append("rnd policy")
         print(f'Time: {time.time() - t1:.2f}s')
         val_accs.append(val_accs[-1])
 
