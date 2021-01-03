@@ -41,13 +41,23 @@ def data_generator(x, y, batch_size=32, train=True):
         idx += batch_size
 
 
-class SimpleModel(tf.keras.Model):
+class ConvModel(tf.keras.Model):
     def __init__(self):
-        super(SimpleModel, self).__init__()
+        super(ConvModel, self).__init__()
         self.model_layers = [
-            tf.keras.layers.Flatten(input_shape=(28, 28, 1)),
-            tf.keras.layers.Dense(128, activation='relu'),
-            tf.keras.layers.Dense(10, activation='softmax')
+            tf.keras.layers.Conv2D(64, (5,5), activation='relu'),
+            tf.keras.layers.Conv2D(32, (3,3), activation='relu'),
+            tf.keras.layers.MaxPooling2D(pool_size=2),
+            tf.keras.layers.Conv2D(32, (3,3), activation='relu'),
+            tf.keras.layers.MaxPooling2D(pool_size=2),
+            tf.keras.layers.Dropout(0.2),
+            tf.keras.layers.Conv2D(32, (3,3), activation='relu'),
+            tf.keras.layers.MaxPooling2D(pool_size=2),
+            tf.keras.layers.Dropout(0.2),
+            tf.keras.layers.Flatten(),
+            tf.keras.layers.Dense(256, activation='relu'),
+            tf.keras.layers.Dropout(0.3),
+            tf.keras.layers.Dense(10)
         ]
 
     def call(self, x, training=False):
@@ -56,11 +66,26 @@ class SimpleModel(tf.keras.Model):
         return x
 
 
-def get_and_compile_model(model_func, lr=0.001):
+class SimpleModel(tf.keras.Model):
+    def __init__(self):
+        super(SimpleModel, self).__init__()
+        self.model_layers = [
+            tf.keras.layers.Flatten(),
+            tf.keras.layers.Dense(128, activation='relu'),
+            tf.keras.layers.Dense(10)
+        ]
+
+    def call(self, x, training=False):
+        for lay in self.model_layers:
+            x = lay(x)
+        return x
+
+
+def get_and_compile_model(model_func, lr=0.0005):
     model = model_func()
     model.compile(
-        loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
         optimizer=tf.keras.optimizers.Adam(lr=lr),
+        loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
         metrics=['accuracy'],
     )
     return model
@@ -70,10 +95,10 @@ if __name__ == "__main__":
     from Auto_Augment.core.util import set_memory_growth
     import time
     train, val, test = get_mnist()
-    model = get_and_compile_model(SimpleModel)
+    model = get_and_compile_model(ConvModel)
     
 
-    e = 25
+    e = 50
 
     def select_args():
         probs_11 = [p/10 for p in range(11)]
@@ -92,14 +117,14 @@ if __name__ == "__main__":
         ]
 
     args = []
-    val_accs = []
-    for i in range(30):
+    last_val_accs = []
+    for i in range(10):
         print("EXPERIMENT:", i)
         t1 = time.time()
         if i < 3:
             losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=NoAugmentationPolicy())
             args.append(None)
-        elif i < 15:
+        elif i < 6:
             fixed = FixAugmentationPolicy(select_args)
             losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=fixed)
             args.append(fixed.aug_args)
@@ -108,10 +133,11 @@ if __name__ == "__main__":
             losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=rnd)
             args.append("rnd policy")
         print(f'Time: {time.time() - t1:.2f}s')
-        val_accs.append(val_accs[-1])
+        last_val_accs.append(val_accs[-1])
 
-    val_accs, args = zip(*sorted(zip(val_accs, args)))
-    for ar, va in zip(args, val_accs):
-        print(f"{va.numpy():.4f}", ar)
+    acc_args = list(zip(last_val_accs, args))
+    acc_args.sort(key=lambda x: x[0])
+    for acc, ag in acc_args:
+        print(acc.numpy(), ag)
 
 # todo: determine the magnitudes and probabilities that is optimal for random and fixed augmentation policy
