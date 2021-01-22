@@ -1,5 +1,5 @@
-from Auto_Augment.core.train.classification_supervised_loop import supervised_train_loop
-from Auto_Augment.augmentation_policies.baselines import \
+from AA.core.train.classification_supervised_loop import supervised_train_loop
+from AA.augmentation_policies.baselines import \
     NoAugmentationPolicy, FixAugmentationPolicy, RandomAugmentationPolicy
 import tensorflow as tf
 import numpy as np
@@ -81,7 +81,7 @@ class SimpleModel(tf.keras.Model):
         return x
 
 
-def get_and_compile_model(model_func, lr=0.0005):
+def get_and_compile_model(model_func, lr=0.001):
     model = model_func()
     model.compile(
         optimizer=tf.keras.optimizers.Adam(lr=lr),
@@ -98,7 +98,7 @@ if __name__ == "__main__":
     model = get_and_compile_model(ConvModel)
     
 
-    e = 50
+    e = 5
 
     def select_args():
         probs_11 = [p/10 for p in range(11)]
@@ -118,13 +118,13 @@ if __name__ == "__main__":
 
     args = []
     last_val_accs = []
-    for i in range(10):
+    for i in range(4):
         print("EXPERIMENT:", i)
         t1 = time.time()
-        if i < 3:
+        if i < 2:
             losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=NoAugmentationPolicy())
             args.append(None)
-        elif i < 6:
+        elif i < 4:
             fixed = FixAugmentationPolicy(select_args)
             losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=fixed)
             args.append(fixed.aug_args)

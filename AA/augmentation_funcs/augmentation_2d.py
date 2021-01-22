@@ -1,4 +1,6 @@
 import tensorflow as tf
+import tensorflow_addons as tfa
+import numpy as np
 import random
 import sys
 
@@ -25,7 +27,7 @@ def apply_random_quality(image_tensor, label_tensor, do_prob=0.1, min_quality=0,
 
 def apply_random_contrast(image_tensor, label_tensor, do_prob=1.0, magnitude=1.0):
     if tf.random.uniform(()) <= do_prob:
-        image_tensor = tf.image.random_contrast(image_tensor, 0.0, magnitude+0.01)
+        image_tensor = tf.image.random_contrast(image_tensor, 0.0, magnitude + 0.01)
     return image_tensor, label_tensor
 
 

@@ -1,5 +1,5 @@
 import tensorflow as tf
-from Auto_Augment.augmentation_funcs.augmentation_2d import \
+from AA.augmentation_funcs.augmentation_2d import \
     apply_random_brightness, apply_random_hue, apply_random_quality, apply_random_contrast, \
     apply_random_left_right_flip, apply_random_up_down_flip, apply_random_shear, apply_random_zoom
 import random
@@ -41,7 +41,6 @@ class FixAugmentationPolicy(tf.keras.Model):
         if image:
             self.augmentation_choices = [apply_random_brightness, apply_random_contrast,
                                          apply_random_left_right_flip, apply_random_up_down_flip]
-                                         # apply_random_shear, apply_random_zoom]
         else:
             raise NotImplementedError()
 
