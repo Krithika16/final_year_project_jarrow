@@ -1,5 +1,5 @@
-from AA.core.train.classification_supervised_loop import supervised_train_loop
-from AA.augmentation_policies.baselines import \
+from augpolicies.core.train.classification_supervised_loop import supervised_train_loop
+from augpolicies.augmentation_policies.baselines import \
     NoAugmentationPolicy, FixAugmentationPolicy, RandomAugmentationPolicy
 import tensorflow as tf
 import numpy as np
