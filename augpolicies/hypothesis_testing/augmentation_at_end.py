@@ -3,6 +3,7 @@ from augpolicies.core.train.classification_supervised_loop import supervised_tra
 from augpolicies.augmentation_policies.baselines import HalfAugmentationPolicy
 
 import random
+import numpy as np
 
 
 if __name__ == "__main__":
@@ -27,7 +28,15 @@ if __name__ == "__main__":
             # (random.choice(probs_3), random.choice(mags_zoom)),
         ]
 
-    e = 10
+    def select_args():
+        return [
+            (0.1, 0.1),
+            (0.1, 0.1),
+            (0.5,),
+            (0.5,),
+        ]
+
+    e = 20
     e_augs = list(range(e + 1))
 
     import csv
@@ -38,16 +47,18 @@ if __name__ == "__main__":
 
     names = ['interval', 'start', 'end']
     policies = [{'interval': True}, {'start': True}, {'start': False}]
-    for n, p_kwargs in zip(names, policies):
-        for e_aug in e_augs:
-            t1 = time.time()
-            p = HalfAugmentationPolicy(select_args, e, e_aug, **p_kwargs)
-            losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=p)
-            print(f'Time: {time.time() - t1:.2f}s')
-            with open("aug_at_end_data.csv", 'a', newline='') as csvfile:
-                writer = csv.writer(csvfile, delimiter=',',
-                                    quotechar='|', quoting=csv.QUOTE_MINIMAL)
-                writer.writerow([n, f"{e}", f"{e_aug}",
-                                 f"{losses[-1]}", f"{val_losses[-1]}",
-                                 f"{accs[-1]}", f"{val_accs[-1]}",
-                                 f"{time.time() - t1:.2f}"])
+    for _ in range(2):  # repeats
+        for n, p_kwargs in zip(names, policies):
+            for e_aug in e_augs:
+                t1 = time.time()
+                p = HalfAugmentationPolicy(select_args, e, e_aug, **p_kwargs)
+                losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=p)
+                print(f'Time: {time.time() - t1:.2f}s')
+                with open("aug_at_end_data.csv", 'a', newline='') as csvfile:
+                    writer = csv.writer(csvfile, delimiter=',',
+                                        quotechar='|', quoting=csv.QUOTE_MINIMAL)
+                    best_acc_idx = np.argmax(val_accs)
+                    writer.writerow([n, f"{e}", f"{e_aug}",
+                                    f"{losses[best_acc_idx]}", f"{val_losses[best_acc_idx]}",
+                                    f"{accs[best_acc_idx]}", f"{val_accs[best_acc_idx]}",
+                                    f"{time.time() - t1:.2f}"])
