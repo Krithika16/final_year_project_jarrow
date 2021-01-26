@@ -27,7 +27,7 @@ if __name__ == "__main__":
             # (random.choice(probs_3), random.choice(mags_zoom)),
         ]
 
-    e = 3
+    e = 10
     e_augs = list(range(e + 1))
 
     import csv
@@ -45,8 +45,9 @@ if __name__ == "__main__":
             losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=p)
             print(f'Time: {time.time() - t1:.2f}s')
             with open("aug_at_end_data.csv", 'a', newline='') as csvfile:
-                writer = csv.writer(csvfile, delimiter=' ',
+                writer = csv.writer(csvfile, delimiter=',',
                                     quotechar='|', quoting=csv.QUOTE_MINIMAL)
                 writer.writerow([n, f"{e}", f"{e_aug}",
                                  f"{losses[-1]}", f"{val_losses[-1]}",
-                                 f"{accs[-1]}", f"{val_accs[-1]}"])
+                                 f"{accs[-1]}", f"{val_accs[-1]}",
+                                 f"{time.time() - t1:.2f}"])
