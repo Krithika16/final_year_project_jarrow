@@ -11,14 +11,11 @@ if __name__ == "__main__":
     train, val, test = get_mnist()
     model = get_and_compile_model(SimpleModel)
 
-    e = 10
-    e_aug = 9
-
     def select_args():
         probs_11 = [p / 10 for p in range(11)]
         probs_4 = [0.0, 0.1, 0.25, 0.5]
         probs_3 = [0.0, 0.1, 0.2]
-        mags_7 = [p/10 for p in range(7)]
+        mags_7 = [p / 10 for p in range(7)]
         # mags_shear = [p * 5 for p in range(5)]
         # mags_zoom = [p * 0.5 for p in range(5)]
         return [
@@ -26,20 +23,30 @@ if __name__ == "__main__":
             (random.choice(probs_11), random.choice(mags_7)),
             (random.choice(probs_4),),
             (random.choice(probs_4),),
-            #(random.choice(probs_3), random.choice(mags_shear)),
-            #(random.choice(probs_3), random.choice(mags_zoom)),
+            # (random.choice(probs_3), random.choice(mags_shear)),
+            # (random.choice(probs_3), random.choice(mags_zoom)),
         ]
 
-    t1 = time.time()
-    fixed = HalfAugmentationPolicy(select_args)
-    losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=fixed)
+    e = 3
+    e_augs = list(range(e + 1))
 
-    print(f'Time: {time.time() - t1:.2f}s')
+    import csv
+    with open("aug_at_end_data.csv", 'a', newline='') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',',
+                            quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        writer.writerow(["name", "e", "e_augs", "loss", "val_loss", "acc", "val_acc", "time"])
 
-
-# list of augmentation functions
-
-
-# classification task
-
-
+    names = ['interval', 'start', 'end']
+    policies = [{'interval': True}, {'start': True}, {'start': False}]
+    for n, p_kwargs in zip(names, policies):
+        for e_aug in e_augs:
+            t1 = time.time()
+            p = HalfAugmentationPolicy(select_args, e, e_aug, **p_kwargs)
+            losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=p)
+            print(f'Time: {time.time() - t1:.2f}s')
+            with open("aug_at_end_data.csv", 'a', newline='') as csvfile:
+                writer = csv.writer(csvfile, delimiter=' ',
+                                    quotechar='|', quoting=csv.QUOTE_MINIMAL)
+                writer.writerow([n, f"{e}", f"{e_aug}",
+                                 f"{losses[-1]}", f"{val_losses[-1]}",
+                                 f"{accs[-1]}", f"{val_accs[-1]}"])

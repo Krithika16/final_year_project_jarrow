@@ -16,9 +16,10 @@ class NoAugmentationPolicy(tf.keras.Model):
 
 
 class RandomAugmentationPolicy(tf.keras.Model):
-    def __init__(self, aug_args_func, apply_to_y=False, image=True):
+    def __init__(self, aug_args_func, apply_to_y=False, image=True, num_to_apply=2):
         super(RandomAugmentationPolicy, self).__init__()
         self.aug_args_func = aug_args_func
+        self.num_to_apply = num_to_apply
         if image:
             self.augmentation_choices = [apply_random_brightness, apply_random_contrast,
                                          apply_random_left_right_flip, apply_random_up_down_flip,
@@ -27,17 +28,19 @@ class RandomAugmentationPolicy(tf.keras.Model):
             raise NotImplementedError()
 
     def call(self, inputs, training=False):
-        aug_args = list(zip(self.augmentation_choices, self.aug_args_func()))
-        random.shuffle(aug_args)
         x, y, e = inputs
-        for aug, args in aug_args:
+        aug_idxes = random.sample(range(len(self.augmentation_choices)), self.num_to_apply)
+        for idx in aug_idxes:
+            aug = self.augmentation_choices[idx]
+            args = self.aug_args[idx]
             x, y = aug(x, y, *args)
         return x, y
 
 
 class FixAugmentationPolicy(tf.keras.Model):
-    def __init__(self, aug_args_func, apply_to_y=False, image=True):
+    def __init__(self, aug_args_func, apply_to_y=False, image=True, num_to_apply=2):
         super(FixAugmentationPolicy, self).__init__()
+        self.num_to_apply = num_to_apply
         self.aug_args = aug_args_func()
         if image:
             self.augmentation_choices = [apply_random_brightness, apply_random_contrast,
@@ -47,16 +50,20 @@ class FixAugmentationPolicy(tf.keras.Model):
 
     def call(self, inputs, training=False):
         x, y, e = inputs
-        for aug, args in zip(self.augmentation_choices, self.aug_args):
+        aug_idxes = random.sample(range(len(self.augmentation_choices)), self.num_to_apply)
+        for idx in aug_idxes:
+            aug = self.augmentation_choices[idx]
+            args = self.aug_args[idx]
             x, y = aug(x, y, *args)
         return x, y
 
 
 class HalfAugmentationPolicy(tf.keras.Model):
     def __init__(self, aug_args_func, e_total, aug_applications, apply_to_y=False, image=True,
-                 start=None, interval=None):
+                 start=None, interval=None, num_to_apply=2):
         super(HalfAugmentationPolicy, self).__init__()
         self.aug_args = aug_args_func()
+        self.num_to_apply = num_to_apply
         self.start = start
         self.interval = interval
         self.e_split = e_total
@@ -75,9 +82,8 @@ class HalfAugmentationPolicy(tf.keras.Model):
         elif start is not None:
             self.apply_aug_func = self.split_end
         elif interval:
-            self.last_idx = -1
             self.idxes = self.get_interval_idxes(e_total, aug_applications)
-            self.apply_aug_func = self.split_end
+            self.apply_aug_func = self.split_interval
         if image:
             self.augmentation_choices = [apply_random_brightness, apply_random_contrast,
                                          apply_random_left_right_flip, apply_random_up_down_flip]
@@ -88,7 +94,10 @@ class HalfAugmentationPolicy(tf.keras.Model):
         x, y, e = inputs
         apply_aug = self.apply_aug_func(e)
         if apply_aug:
-            for aug, args in zip(self.augmentation_choices, self.aug_args):
+            aug_idxes = random.sample(range(len(self.augmentation_choices)), self.num_to_apply)
+            for idx in aug_idxes:
+                aug = self.augmentation_choices[idx]
+                args = self.aug_args[idx]
                 x, y = aug(x, y, *args)
         return x, y
 
@@ -99,9 +108,7 @@ class HalfAugmentationPolicy(tf.keras.Model):
         return e > self.e_split
 
     def split_interval(self, e):
-        next_e = self.idxes[self.last_idx + 1]
-        if next_e == e:
-            self.last_idx += 1
+        if e in self.idxes:
             return True
         return False
 
@@ -126,14 +133,14 @@ class HalfAugmentationPolicy(tf.keras.Model):
                 idxes.append(idx - 1)
                 idx -= 2
         else:
-            idx_freq =  e_total / aug_applications
+            idx_freq = e_total / aug_applications
             idx = e_total
             while (idx > 0) and len(idxes) < aug_applications:
                 if idxes == []:
                     idxes.append(idx - 1)
                 else:
                     target = 1 + idxes[-1] - idx_freq
-                    if idx - target  <= 0.5:
+                    if idx - target <= 0.5:
                         idxes.append(idx - 1)
                 idx -= 1
         idxes = sorted(idxes)
@@ -142,12 +149,13 @@ class HalfAugmentationPolicy(tf.keras.Model):
         return idxes
 
 
-
 if __name__ == "__main__":
     import os
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
     def temp():
         return
+
     e_total = 5
     aug_apps = 2
     expected_output = [2, 4]
