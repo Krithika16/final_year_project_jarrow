@@ -92,11 +92,10 @@ def get_and_compile_model(model_func, lr=0.001):
 
 
 if __name__ == "__main__":
-    from Auto_Augment.core.util import set_memory_growth
+    from augpolicies.core.util import set_memory_growth
     import time
     train, val, test = get_mnist()
     model = get_and_compile_model(ConvModel)
-    
 
     e = 5
 

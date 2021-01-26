@@ -29,18 +29,18 @@ def eval_loop(val_ds, model):
     return e_val_loss_avg.result(), e_val_acc.result()
 
 
-def epoch(train_ds, val_ds, model, augmentation_policy):
+def epoch(train_ds, val_ds, model, augmentation_policy, epoch_number):
     e_loss_avg = tf.keras.metrics.Mean()
     e_acc = tf.keras.metrics.SparseCategoricalAccuracy()
     optimizer = model.optimizer
     loss = model.loss
     for x, y in train_ds:
         if augmentation_policy is not None:
-            x, y = augmentation_policy((x, y))
+            x, y = augmentation_policy((x, y, epoch_number))
         tr_loss, tr_pred = train_step(model, x, y, optimizer, loss)
         e_loss_avg.update_state(tr_loss)
         e_acc.update_state(y, tr_pred)
-    e_val_loss_avg, e_val_acc = eval_loop(val_ds, model, )
+    e_val_loss_avg, e_val_acc = eval_loop(val_ds, model)
     return e_loss_avg.result(), e_val_loss_avg, e_acc.result(), e_val_acc
 
 
@@ -56,7 +56,7 @@ def supervised_train_loop(model, train, val, data_generator, augmentation_policy
 
     for e in range(epochs):
 
-        e_loss_avg, e_val_loss_avg, e_acc, e_val_acc = epoch(train_ds, val_ds, model, augmentation_policy)
+        e_loss_avg, e_val_loss_avg, e_acc, e_val_acc = epoch(train_ds, val_ds, model, augmentation_policy, e)
 
         train_loss_results.append(e_loss_avg)
         train_val_loss_results.append(e_val_loss_avg)
