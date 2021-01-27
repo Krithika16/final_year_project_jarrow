@@ -124,6 +124,7 @@ class HalfAugmentationPolicy(tf.keras.Model):
         if aug_applications == 0:
             return idxes
         if above_half:
+            # print("AH")
             idx = e_total
             while (idx > 0) and len(idxes) < aug_applications:
                 idxes.append(idx - 1)
@@ -133,17 +134,24 @@ class HalfAugmentationPolicy(tf.keras.Model):
                 idxes.append(idx - 1)
                 idx -= 2
         else:
+            # print("Not AH")
             idx_freq = e_total / aug_applications
             idx = e_total
+            prev_target = target = idx
             while (idx > 0) and len(idxes) < aug_applications:
                 if idxes == []:
                     idxes.append(idx - 1)
                 else:
-                    target = 1 + idxes[-1] - idx_freq
                     if idx - target <= 0.5:
+                        prev_target = target
+                        target = prev_target - idx_freq
                         idxes.append(idx - 1)
                 idx -= 1
         idxes = sorted(idxes)
+        # print(len(idxes))
+        # print(aug_applications)
+        print(idxes)
+        # print("------")
         assert len(idxes) == aug_applications
         assert e_total - 1 in idxes
         return idxes

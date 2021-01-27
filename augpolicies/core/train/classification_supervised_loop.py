@@ -63,7 +63,7 @@ def supervised_train_loop(model, train, val, data_generator, augmentation_policy
         train_acc_results.append(e_acc)
         train_val_acc_results.append(e_val_acc)
         if debug:
-            tf.print(f"{e+1:03d}/{epochs:03d}: Loss: {train_loss_results[-1]:.3f}, Val Loss: {train_val_loss_results[-1]:.3f}, Acc: {train_acc_results[-1]:.3f}, Val Acc: {train_val_acc_results[-1]:.3f}")
+            # tf.print(f"{e+1:03d}/{epochs:03d}: Loss: {train_loss_results[-1]:.3f}, Val Loss: {train_val_loss_results[-1]:.3f}, Acc: {train_acc_results[-1]:.3f}, Val Acc: {train_val_acc_results[-1]:.3f}")
 
             if e == (epochs - 1):
                 loss, acc = eval_loop(train_ds, model)
