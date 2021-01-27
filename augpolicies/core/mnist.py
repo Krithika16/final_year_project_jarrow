@@ -60,7 +60,8 @@ class ConvModel(tf.keras.Model):
             tf.keras.layers.Dense(10)
         ]
 
-    def call(self, x, training=False):
+    def call(self, inputs, training=False):
+        x = inputs
         for lay in self.model_layers:
             x = lay(x)
         return x
@@ -75,7 +76,8 @@ class SimpleModel(tf.keras.Model):
             tf.keras.layers.Dense(10)
         ]
 
-    def call(self, x, training=False):
+    def call(self, inputs, training=False):
+        x = inputs
         for lay in self.model_layers:
             x = lay(x)
         return x

@@ -9,8 +9,7 @@ import numpy as np
 if __name__ == "__main__":
     from augpolicies.core.util import set_memory_growth
     import time
-    train, val, test = get_mnist()
-    model = get_and_compile_model(SimpleModel)
+    
 
     def select_args():
         probs_11 = [p / 10 for p in range(11)]
@@ -50,6 +49,8 @@ if __name__ == "__main__":
     for _ in range(3):  # repeats
         for n, p_kwargs in zip(names, policies):
             for e_aug in e_augs:
+                train, val, test = get_mnist()
+                model = get_and_compile_model(SimpleModel)
                 t1 = time.time()
                 p = HalfAugmentationPolicy(select_args, e, e_aug, **p_kwargs)
                 losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=p)
