@@ -37,7 +37,7 @@ if __name__ == "__main__":
         ]
 
     e = 30
-    e_augs = list(range(e + 1))
+    e_augs = [0, 30]
 
     import csv
     with open("aug_at_end_data.csv", 'a', newline='') as csvfile:
@@ -47,7 +47,7 @@ if __name__ == "__main__":
 
     names = ['interval', 'start', 'end']
     policies = [{'interval': True}, {'start': True}, {'start': False}]
-    for _ in range(2):  # repeats
+    for _ in range(3):  # repeats
         for n, p_kwargs in zip(names, policies):
             for e_aug in e_augs:
                 t1 = time.time()

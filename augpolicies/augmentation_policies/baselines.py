@@ -66,7 +66,6 @@ class HalfAugmentationPolicy(tf.keras.Model):
         self.num_to_apply = num_to_apply
         self.start = start
         self.interval = interval
-        self.e_split = e_total
 
         assert start is not None or interval is not None
         if start is None:
@@ -102,10 +101,10 @@ class HalfAugmentationPolicy(tf.keras.Model):
         return x, y
 
     def split_start(self, e):
-        return e < self.e_split
+        return e < self.aug_applications
 
     def split_end(self, e):
-        return e > self.e_split
+        return e >= (self.e_total - self.aug_applications)
 
     def split_interval(self, e):
         if e in self.idxes:
