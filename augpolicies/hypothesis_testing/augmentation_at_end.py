@@ -37,7 +37,7 @@ if __name__ == "__main__":
         ]
 
     e = 30
-    e_augs = [0, 30]
+    e_augs = list(range(e + 1))
 
     import csv
     with open("aug_at_end_data.csv", 'a', newline='') as csvfile:
