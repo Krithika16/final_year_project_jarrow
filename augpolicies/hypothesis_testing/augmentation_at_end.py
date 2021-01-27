@@ -47,7 +47,7 @@ if __name__ == "__main__":
 
     names = ['interval', 'start', 'end']
     policies = [{'interval': True}, {'start': True}, {'start': False}]
-    for _ in range(4):  # repeats
+    for _ in range(2):  # repeats
         for n, p_kwargs in zip(names, policies):
             for e_aug in e_augs:
                 t1 = time.time()
