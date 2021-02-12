@@ -1,6 +1,6 @@
 from augpolicies.core.train.classification_supervised_loop import supervised_train_loop
 from augpolicies.augmentation_policies.baselines import \
-    NoAugmentationPolicy, FixAugmentationPolicy, RandomAugmentationPolicy
+    NoAugmentationPolicy, AugmentationPolicy
 import tensorflow as tf
 import numpy as np
 import random
@@ -126,13 +126,10 @@ if __name__ == "__main__":
             losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=NoAugmentationPolicy())
             args.append(None)
         elif i < 4:
-            fixed = FixAugmentationPolicy(select_args)
+            fixed = AugmentationPolicy(select_args)
             losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=fixed)
-            args.append(fixed.aug_args)
-        else:
-            rnd = RandomAugmentationPolicy(select_args)
-            losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=rnd)
-            args.append("rnd policy")
+            args.append("aug_policy")
+
         print(f'Time: {time.time() - t1:.2f}s')
         last_val_accs.append(val_accs[-1])
 
