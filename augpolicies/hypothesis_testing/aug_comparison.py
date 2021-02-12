@@ -20,7 +20,6 @@ if __name__ == "__main__":
     from augpolicies.core.util import set_memory_growth
 
     train, val, test = get_mnist()
-    model = get_and_compile_model(SimpleModel)
     t1 = time.time()
 
     e = 20
@@ -38,6 +37,7 @@ if __name__ == "__main__":
     for i in range(3):
         t1 = time.time()
         ap = NoAugmentationPolicy()
+        model = get_and_compile_model(SimpleModel)
         losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=ap)
         with open("aug_comparison.csv", 'a', newline='') as csvfile:
             writer = csv.writer(csvfile, delimiter=',',
@@ -57,6 +57,7 @@ if __name__ == "__main__":
             t1 = time.time()
             func = [kwargs_func_prob(prob)]
             ap = AugmentationPolicy(aug, func, num_to_apply=1)
+            model = get_and_compile_model(SimpleModel)
             losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=ap)
             with open("aug_comparison.csv", 'a', newline='') as csvfile:
                 writer = csv.writer(csvfile, delimiter=',',
@@ -71,6 +72,7 @@ if __name__ == "__main__":
                 t1 = time.time()
                 func = [kwargs_func_prob_mag(do_prob_mean=prob, mag_mean=mag * i)]
                 ap = AugmentationPolicy(aug, func, num_to_apply=1)
+                model = get_and_compile_model(SimpleModel)
                 losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=ap)
                 with open("aug_comparison.csv", 'a', newline='') as csvfile:
                     writer = csv.writer(csvfile, delimiter=',',
