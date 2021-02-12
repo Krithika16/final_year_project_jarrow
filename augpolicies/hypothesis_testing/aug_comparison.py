@@ -1,6 +1,6 @@
 from augpolicies.core.mnist import get_mnist, data_generator, get_and_compile_model, SimpleModel
 from augpolicies.core.train.classification_supervised_loop import supervised_train_loop
-from augpolicies.augmentation_policies.baselines import AugmentationPolicy
+from augpolicies.augmentation_policies.baselines import NoAugmentationPolicy, AugmentationPolicy
 from augpolicies.augmentation_funcs.augmentation_2d import apply_random_brightness, apply_random_hue, \
     apply_random_contrast, apply_random_left_right_flip, apply_random_up_down_flip, apply_random_shear, apply_random_zoom
 from augpolicies.augmentation_funcs.augmentation_2d import kwargs_func_prob, kwargs_func_prob_mag
@@ -35,6 +35,19 @@ if __name__ == "__main__":
         apply_random_zoom,
     ]
 
+    for i in range(3):
+        t1 = time.time()
+        ap = NoAugmentationPolicy()
+        losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=ap)
+        with open("aug_comparison.csv", 'a', newline='') as csvfile:
+            writer = csv.writer(csvfile, delimiter=',',
+                                quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            best_acc_idx = np.argmax(val_accs)
+            writer.writerow(["No Aug", f"{e}", f"{best_acc_idx+1}", "", "",
+                             f"{losses[best_acc_idx]}", f"{val_losses[best_acc_idx]}",
+                             f"{accs[best_acc_idx]}", f"{val_accs[best_acc_idx]}",
+                             f"{time.time() - t1:.2f}"])
+
     for idx, aug in enumerate(aug_choices):
         aug = [aug_choices[idx]]
         prob = 0.5
@@ -49,7 +62,7 @@ if __name__ == "__main__":
                 writer = csv.writer(csvfile, delimiter=',',
                                     quotechar='|', quoting=csv.QUOTE_MINIMAL)
                 best_acc_idx = np.argmax(val_accs)
-                writer.writerow([aug[0].__name__, f"{e}", f"{best_acc_idx+1}", f"{prob}", f"{mag}",
+                writer.writerow([aug[0].__name__, f"{e}", f"{best_acc_idx+1}", f"{prob}", "",
                                  f"{losses[best_acc_idx]}", f"{val_losses[best_acc_idx]}",
                                  f"{accs[best_acc_idx]}", f"{val_accs[best_acc_idx]}",
                                  f"{time.time() - t1:.2f}"])
