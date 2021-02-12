@@ -15,64 +15,44 @@ class NoAugmentationPolicy(tf.keras.Model):
         return x, y
 
 
-class RandomAugmentationPolicy(tf.keras.Model):
-    def __init__(self, aug_args_func, apply_to_y=False, image=True, num_to_apply=2):
-        super(RandomAugmentationPolicy, self).__init__()
-        self.aug_args_func = aug_args_func
+class AugmentationPolicy(tf.keras.Model):
+    def __init__(self, aug_choices, aug_kwargs_funcs_list,
+                 apply_to_y=False, image=True, num_to_apply=2):
+        super(AugmentationPolicy, self).__init__()
+        assert len(aug_choices) == len(aug_kwargs_funcs_list)
+        assert num_to_apply <= len(aug_choices)
         self.num_to_apply = num_to_apply
-        if image:
-            self.augmentation_choices = [apply_random_brightness, apply_random_contrast,
-                                         apply_random_left_right_flip, apply_random_up_down_flip,
-                                         apply_random_shear, apply_random_zoom]
-        else:
-            raise NotImplementedError()
+        self.aug_choices = aug_choices
+        self.aug_kwargs_funcs_list = aug_kwargs_funcs_list
 
     def call(self, inputs, training=False):
         x, y, e = inputs
-        aug_idxes = random.sample(range(len(self.augmentation_choices)), self.num_to_apply)
+        aug_idxes = random.sample(range(len(self.aug_choices)), self.num_to_apply)
         for idx in aug_idxes:
-            aug = self.augmentation_choices[idx]
-            args = self.aug_args[idx]
-            x, y = aug(x, y, *args)
-        return x, y
-
-
-class FixAugmentationPolicy(tf.keras.Model):
-    def __init__(self, aug_args_func, apply_to_y=False, image=True, num_to_apply=2):
-        super(FixAugmentationPolicy, self).__init__()
-        self.num_to_apply = num_to_apply
-        self.aug_args = aug_args_func()
-        if image:
-            self.augmentation_choices = [apply_random_brightness, apply_random_contrast,
-                                         apply_random_left_right_flip, apply_random_up_down_flip]
-        else:
-            raise NotImplementedError()
-
-    def call(self, inputs, training=False):
-        x, y, e = inputs
-        aug_idxes = random.sample(range(len(self.augmentation_choices)), self.num_to_apply)
-        for idx in aug_idxes:
-            aug = self.augmentation_choices[idx]
-            args = self.aug_args[idx]
-            x, y = aug(x, y, *args)
+            aug = self.aug_choices[idx]
+            kwargs = self.aug_kwargs_funcs_list[idx]()
+            x, y = aug(x, y, **kwargs)
         return x, y
 
 
 class HalfAugmentationPolicy(tf.keras.Model):
-    def __init__(self, aug_args_func, e_total, aug_applications, apply_to_y=False, image=True,
+    def __init__(self, aug_choices, aug_kwargs_funcs_list,
+                 e_total, aug_applications,
+                 apply_to_y=False, image=True,
                  start=None, interval=None, num_to_apply=2):
         super(HalfAugmentationPolicy, self).__init__()
-        self.aug_args = aug_args_func()
         self.num_to_apply = num_to_apply
         self.start = start
         self.interval = interval
-
+        assert len(aug_choices) == len(aug_kwargs_funcs_list)
+        assert num_to_apply <= len(aug_choices)
         assert start is not None or interval is not None
         if start is None:
             assert interval is not None
         if interval is None:
             assert start is not None
         assert e_total >= aug_applications >= 0
+        self.aug_kwargs_funcs_list = aug_kwargs_funcs_list
         self.aug_applications = aug_applications
         self.e_total = e_total
 
@@ -83,21 +63,17 @@ class HalfAugmentationPolicy(tf.keras.Model):
         elif interval:
             self.idxes = self.get_interval_idxes(e_total, aug_applications)
             self.apply_aug_func = self.split_interval
-        if image:
-            self.augmentation_choices = [apply_random_brightness, apply_random_contrast,
-                                         apply_random_left_right_flip, apply_random_up_down_flip]
-        else:
-            raise NotImplementedError()
+        self.aug_choices = aug_choices
 
     def call(self, inputs, training=False):
         x, y, e = inputs
         apply_aug = self.apply_aug_func(e)
         if apply_aug:
-            aug_idxes = random.sample(range(len(self.augmentation_choices)), self.num_to_apply)
+            aug_idxes = random.sample(range(len(self.aug_choices)), self.num_to_apply)
             for idx in aug_idxes:
-                aug = self.augmentation_choices[idx]
-                args = self.aug_args[idx]
-                x, y = aug(x, y, *args)
+                aug = self.aug_choices[idx]
+                kwargs = self.aug_kwargs_funcs_list[idx]()
+                x, y = aug(x, y, **kwargs)
         return x, y
 
     def split_start(self, e):

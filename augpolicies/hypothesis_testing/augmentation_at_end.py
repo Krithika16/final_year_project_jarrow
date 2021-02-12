@@ -9,7 +9,7 @@ import numpy as np
 if __name__ == "__main__":
     from augpolicies.core.util import set_memory_growth
     import time
-    
+
 
     def select_args():
         probs_11 = [p / 10 for p in range(11)]
@@ -60,6 +60,6 @@ if __name__ == "__main__":
                                         quotechar='|', quoting=csv.QUOTE_MINIMAL)
                     best_acc_idx = np.argmax(val_accs)
                     writer.writerow([n, f"{e}", f"{e_aug}",
-                                    f"{losses[best_acc_idx]}", f"{val_losses[best_acc_idx]}",
-                                    f"{accs[best_acc_idx]}", f"{val_accs[best_acc_idx]}",
-                                    f"{time.time() - t1:.2f}"])
+                                     f"{losses[best_acc_idx]}", f"{val_losses[best_acc_idx]}",
+                                     f"{accs[best_acc_idx]}", f"{val_accs[best_acc_idx]}",
+                                     f"{time.time() - t1:.2f}"])
