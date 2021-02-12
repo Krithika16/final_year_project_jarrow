@@ -10,7 +10,6 @@ if __name__ == "__main__":
     from augpolicies.core.util import set_memory_growth
     import time
 
-
     def select_args():
         probs_11 = [p / 10 for p in range(11)]
         probs_4 = [0.0, 0.1, 0.25, 0.5]
