@@ -10,4 +10,5 @@ plt.plot(df.loc['start'])
 plt.plot(df.loc['interval'])
 
 plt.legend(['end', 'start', 'interval'])
+plt.savefig("aug_at_end")
 plt.show()
