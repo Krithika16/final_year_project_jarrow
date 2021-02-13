@@ -22,16 +22,16 @@ if __name__ == "__main__":
     train, val, test = get_mnist()
     t1 = time.time()
 
-    e = 20
+    e = 2
 
     aug_choices = [
         apply_random_left_right_flip,
         apply_random_up_down_flip,
         apply_random_brightness,
-        apply_random_hue,
+        # apply_random_hue, 3 channel
         apply_random_contrast,
-        apply_random_shear,
-        apply_random_zoom,
+        # apply_random_shear, slow
+        # apply_random_zoom, slow
     ]
 
     for i in range(3):
@@ -54,19 +54,20 @@ if __name__ == "__main__":
         mag = 0.1
 
         if idx < 2:
-            t1 = time.time()
-            func = [kwargs_func_prob(prob)]
-            ap = AugmentationPolicy(aug, func, num_to_apply=1)
-            model = get_and_compile_model(SimpleModel)
-            losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=ap)
-            with open("aug_comparison.csv", 'a', newline='') as csvfile:
-                writer = csv.writer(csvfile, delimiter=',',
-                                    quotechar='|', quoting=csv.QUOTE_MINIMAL)
-                best_acc_idx = np.argmax(val_accs)
-                writer.writerow([aug[0].__name__, f"{e}", f"{best_acc_idx+1}", f"{prob}", "",
-                                 f"{losses[best_acc_idx]}", f"{val_losses[best_acc_idx]}",
-                                 f"{accs[best_acc_idx]}", f"{val_accs[best_acc_idx]}",
-                                 f"{time.time() - t1:.2f}"])
+            for i in range(3):
+                t1 = time.time()
+                func = [kwargs_func_prob(prob)]
+                ap = AugmentationPolicy(aug, func, num_to_apply=1)
+                model = get_and_compile_model(SimpleModel)
+                losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=ap)
+                with open("aug_comparison.csv", 'a', newline='') as csvfile:
+                    writer = csv.writer(csvfile, delimiter=',',
+                                        quotechar='|', quoting=csv.QUOTE_MINIMAL)
+                    best_acc_idx = np.argmax(val_accs)
+                    writer.writerow([aug[0].__name__, f"{e}", f"{best_acc_idx+1}", f"{prob}", "",
+                                     f"{losses[best_acc_idx]}", f"{val_losses[best_acc_idx]}",
+                                     f"{accs[best_acc_idx]}", f"{val_accs[best_acc_idx]}",
+                                     f"{time.time() - t1:.2f}"])
         else:
             for i in range(11):
                 t1 = time.time()
