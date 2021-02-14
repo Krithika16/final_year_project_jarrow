@@ -23,10 +23,12 @@ def kwargs_func_prob(
     do_prob_mean: float = 0.0,
     do_prob_std: float = 0.0
 ) -> Callable[[float, float], dict]:
+
     def prob_kwargs(
         do_prob_mean: float = do_prob_mean,
         do_prob_std: float = do_prob_std
     ) -> dict:
+
         return get_kwarg("do_prob", mean=do_prob_mean, std=do_prob_std)
     return prob_kwargs
 
@@ -37,12 +39,14 @@ def kwargs_func_prob_mag(
     mag_mean: float = 0.0,
     mag_std: float = 0.0
 ) -> Callable[[float, float, float, float], dict]:
+
     def prob_mag_kwargs(
         do_prob_mean: float = do_prob_mean,
         do_prob_std: float = do_prob_std,
         mag_mean: float = mag_mean,
         mag_std: float = mag_std
     ) -> dict:
+
         return {
             **get_kwarg("do_prob", mean=do_prob_mean, std=do_prob_std),
             **get_kwarg("mag", mean=mag_mean, std=mag_std)
@@ -165,7 +169,8 @@ def apply_random_zoom(
 
 # prob, mag1, mag2 as an kwarg input
 
-# def apply_random_quality(image: tfa.types.TensorLike, label: tfa.types.TensorLike, do_prob=0.1, min_quality=0, max_quality=100) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
+# def apply_random_quality(image: tfa.types.TensorLike, label: tfa.types.TensorLike, do_prob=0.1, min_quality=0, max_quality=100
+# ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 #     if tf.random.uniform(()) <= do_prob:
 #         v1 = tf.random.uniform((), minval=min_quality, maxval=max_quality + 1, dtype=tf.int32)
 #         v2 = tf.random.uniform((), minval=min_quality, maxval=max_quality + 1, dtype=tf.int32)
