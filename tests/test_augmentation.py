@@ -1,8 +1,5 @@
 import pytest
 
-def temp():
-    return
-
 @pytest.mark.parametrize(
     "e_total, aug_apps, expected_output",
     [
@@ -26,9 +23,12 @@ def temp():
     ]
 )
 def test_half_aug_policy_idxes(e_total, aug_apps, expected_output):
+    def temp():
+        return None
+
     from augpolicies.augmentation_policies.baselines import HalfAugmentationPolicy
 
-    pol = HalfAugmentationPolicy(temp, e_total, aug_apps, interval=True)
+    pol = HalfAugmentationPolicy([temp, temp], None, e_total, aug_apps, interval=True)
 
     idxes = pol.get_interval_idxes(e_total, aug_apps)
     print(idxes, "==", expected_output)

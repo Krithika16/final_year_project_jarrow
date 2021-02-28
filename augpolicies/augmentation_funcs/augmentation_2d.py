@@ -135,19 +135,19 @@ def apply_random_contrast(
     return image, label
 
 
-def apply_random_shear(
-    image: tfa.types.TensorLike,
-    label: tfa.types.TensorLike,
-    do_prob: float = 1.0,
-    mag: float = 3.0,
-    apply_to_y: bool = False
-) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
+# def apply_random_shear(
+#     image: tfa.types.TensorLike,
+#     label: tfa.types.TensorLike,
+#     do_prob: float = 1.0,
+#     mag: float = 3.0,
+#     apply_to_y: bool = False
+# ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
-    if tf.random.uniform(()) <= do_prob:
-        image = tf.map_fn(fn=lambda t: tf.keras.preprocessing.image.random_shear(t, mag), elems=image)
-        if apply_to_y:
-            raise NotImplementedError("Need to get the arguments to feed into both x and y")
-    return image, label
+#     if tf.random.uniform(()) <= do_prob:
+#         image = tf.map_fn(fn=lambda t: tf.keras.preprocessing.image.random_shear(t, mag), elems=image)
+#         if apply_to_y:
+#             raise NotImplementedError("Need to get the arguments to feed into both x and y")
+#     return image, label
 
 
 def apply_random_zoom(
@@ -164,6 +164,38 @@ def apply_random_zoom(
         image = tf.map_fn(fn=lambda t: tf.keras.preprocessing.image.random_zoom(t, mag), elems=image)
         if apply_to_y:
             raise NotImplementedError("Need to get the arguments to feed into both x and y")
+    return image, label
+
+
+def apply_x_zoom(
+    image: tfa.types.TensorLike,
+    label: tfa.types.TensorLike,
+    do_prob: float = 1.0,
+    mag: float = (2.0, 2.0),
+    apply_to_y: bool = False
+) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
+    rank = tf.rank(image)
+    # w = 
+
+    image = tfa.image.transform(image, [1.0/mag, 0.0, -(w * (1-mag))/(2 * mag), 0.0, 1.0, 0.0, 0.0, 0.0])
+
+
+def apply_x_skew(
+    image: tfa.types.TensorLike,
+    label: tfa.types.TensorLike,
+    do_prob: float = 1.0,
+    mag: float = (2.0, 2.0),
+    apply_to_y: bool = False,
+) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
+
+    min_mag = 1e3
+    max_mag = 0.2
+    negative = tf.random.uniform(()) <= 0.5
+
+    t = [1.0, 1.0/factor, -250/factor, 0.0, 1.0, 0.0, 0.0, 0.0]
+    image_t = tfa.image.transform(image, t)
+    if apply_to_y:
+        label_t = tfa.image.transform(label, t)
     return image, label
 
 

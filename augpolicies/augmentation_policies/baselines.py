@@ -29,6 +29,8 @@ class AugmentationPolicy(tf.keras.Model):
     ):
 
         super(AugmentationPolicy, self).__init__()
+        if aug_kwargs_funcs_list is None:
+            aug_kwargs_funcs_list = [None] * len(aug_choices)
         assert len(aug_choices) == len(aug_kwargs_funcs_list)
         assert num_to_apply <= len(aug_choices)
         self.num_to_apply = num_to_apply
@@ -46,6 +48,8 @@ class AugmentationPolicy(tf.keras.Model):
         for idx in aug_idxes:
             aug = self.aug_choices[idx]
             kwargs = self.aug_kwargs_funcs_list[idx]()
+            if kwargs is None:
+                kwargs = {}
             x, y = aug(x, y, **kwargs)
         return x, y
 
@@ -64,9 +68,8 @@ class HalfAugmentationPolicy(tf.keras.Model):
     ) -> None:
 
         super(HalfAugmentationPolicy, self).__init__()
-        self.num_to_apply = num_to_apply
-        self.start = start
-        self.interval = interval
+        if aug_kwargs_funcs_list is None:
+            aug_kwargs_funcs_list = [None] * len(aug_choices)
         assert len(aug_choices) == len(aug_kwargs_funcs_list)
         assert num_to_apply <= len(aug_choices)
         assert start is not None or interval is not None
@@ -75,6 +78,9 @@ class HalfAugmentationPolicy(tf.keras.Model):
         if interval is None:
             assert start is not None
         assert e_total >= aug_applications >= 0
+        self.start = start
+        self.interval = interval
+        self.num_to_apply = num_to_apply
         self.aug_kwargs_funcs_list = aug_kwargs_funcs_list
         self.aug_applications = aug_applications
         self.e_total = e_total
@@ -101,6 +107,8 @@ class HalfAugmentationPolicy(tf.keras.Model):
             for idx in aug_idxes:
                 aug = self.aug_choices[idx]
                 kwargs = self.aug_kwargs_funcs_list[idx]()
+                if kwargs is None:
+                    kwargs = {}
                 x, y = aug(x, y, **kwargs)
         return x, y
 
