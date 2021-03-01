@@ -1,5 +1,6 @@
 import pytest
 
+
 @pytest.mark.parametrize(
     "e_total, aug_apps, expected_output",
     [

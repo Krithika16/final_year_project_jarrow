@@ -63,7 +63,7 @@ def apply_random_left_right_flip(
     apply_to_y: bool = False
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
-    image, label = flip_randomly_image_pair_2d(image, label, tf.image.random_flip_left_right, do_prob, apply_to_y)
+    image, label = flip_randomly_image_pair(image, label, tf.image.random_flip_left_right, do_prob, apply_to_y)
     return image, label
 
 
@@ -74,11 +74,10 @@ def apply_random_up_down_flip(
     apply_to_y: bool = False
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
-    image, label = flip_randomly_image_pair_2d(image, label, tf.image.random_flip_up_down, do_prob, apply_to_y)
+    image, label = flip_randomly_image_pair(image, label, tf.image.random_flip_up_down, do_prob, apply_to_y)
     return image, label
 
-
-def flip_randomly_image_pair_2d(
+def flip_randomly_image_pair(
     image: tfa.types.TensorLike,
     label: tfa.types.TensorLike,
     flip_op: Callable[[tfa.types.TensorLike, tfa.types.TensorLike, float, bool], Tuple[tfa.types.TensorLike, tfa.types.TensorLike]],
@@ -86,14 +85,18 @@ def flip_randomly_image_pair_2d(
     apply_to_y: bool = False
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
-    random_var = tf.random.uniform(()) <= do_prob
-    image = tf.cond(pred=random_var,
-                    true_fn=lambda: flip_op(image),
-                    false_fn=lambda: image)
+    random_var = tf.random.uniform([]) <= do_prob
+    if random_var:
+        image = flip_op(image)
+    # image = tf.cond(pred=random_var,
+    #                 true_fn=lambda: flip_op(image),
+    #                 false_fn=lambda: image)
     if apply_to_y:
-        label = tf.cond(pred=random_var,
-                        true_fn=lambda: flip_op(label),
-                        false_fn=lambda: label)
+        if random_var:
+            label = flip_op(label)
+        # label = tf.cond(pred=random_var,
+        #                 true_fn=lambda: flip_op(label),
+        #                 false_fn=lambda: label)
     return image, label
 
 
@@ -106,7 +109,7 @@ def apply_random_brightness(
     mag: float = 0.2
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
-    if tf.random.uniform(()) <= do_prob:
+    if tf.random.uniform([]) <= do_prob:
         image = tf.image.random_brightness(image, mag)
     return image, label
 
@@ -118,7 +121,7 @@ def apply_random_hue(
     mag: float = 0.2
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
-    if tf.random.uniform(()) <= do_prob:
+    if tf.random.uniform([]) <= do_prob:
         image = tf.image.random_hue(image, mag)
     return image, label
 
@@ -150,53 +153,106 @@ def apply_random_contrast(
 #     return image, label
 
 
-def apply_random_zoom(
+# def apply_random_zoom(
+#     image: tfa.types.TensorLike,
+#     label: tfa.types.TensorLike,
+#     do_prob: float = 1.0,
+#     mag: float = (2.0, 2.0),
+#     apply_to_y: bool = False
+# ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
+
+#     if type(mag) is float:
+#         mag = (mag, mag)
+#     if tf.random.uniform(()) <= do_prob:
+#         image = tf.map_fn(fn=lambda t: tf.keras.preprocessing.image.random_zoom(t, mag), elems=image)
+#         if apply_to_y:
+#             raise NotImplementedError("Need to get the arguments to feed into both x and y")
+#     return image, label
+
+
+def apply_zoom(
     image: tfa.types.TensorLike,
     label: tfa.types.TensorLike,
-    do_prob: float = 1.0,
-    mag: float = (2.0, 2.0),
+    mag: tfa.types.TensorLike,
     apply_to_y: bool = False
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
-    if type(mag) is float:
-        mag = (mag, mag)
-    if tf.random.uniform(()) <= do_prob:
-        image = tf.map_fn(fn=lambda t: tf.keras.preprocessing.image.random_zoom(t, mag), elems=image)
-        if apply_to_y:
-            raise NotImplementedError("Need to get the arguments to feed into both x and y")
+    x_mag = mag[0]
+    y_mag = mag[1]
+    transforms = np.array([[1.0, 0.0, 0.0,
+                              0.0, 1.0, 0.0,
+                              0.0, 0.0]])
+    rank = tf.rank(image)  # NHWC, HWC, HW
+    if rank == 3: # hwc
+        h = image.shape[0]
+        w = image.shape[1]
+    elif rank == 4: # nhwc
+        h = image.shape[1]
+        w = image.shape[2]
+        transforms = np.broadcast_to(transforms, [image.shape[0], 8])
+    c = image.shape[-1]
+    assert c == 1 or c == 3, "last column must be rgb or grayscale"
+
+    transforms[:, 0] = 1.0 / x_mag
+    transforms[:, 2] = -(w * (1 - x_mag)) / (2 * x_mag)
+    transforms[:, 4] = 1.0 / y_mag
+    transforms[:, 5] =  -(h * (1 - y_mag)) / (2 * y_mag)
+    if rank == 3:
+        transforms = transforms[0]
+    image = tfa.image.transform(image, transforms)
+    if apply_to_y:
+        label = tfa.image.transform(label, transforms)
     return image, label
 
 
-def apply_x_zoom(
+def apply_skew(
     image: tfa.types.TensorLike,
     label: tfa.types.TensorLike,
-    do_prob: float = 1.0,
-    mag: float = (2.0, 2.0),
-    apply_to_y: bool = False
-) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
-    rank = tf.rank(image)
-    # w = 
-
-    image = tfa.image.transform(image, [1.0/mag, 0.0, -(w * (1-mag))/(2 * mag), 0.0, 1.0, 0.0, 0.0, 0.0])
-
-
-def apply_x_skew(
-    image: tfa.types.TensorLike,
-    label: tfa.types.TensorLike,
-    do_prob: float = 1.0,
-    mag: float = (2.0, 2.0),
+    mag: tfa.types.TensorLike,
     apply_to_y: bool = False,
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
-    min_mag = 1e3
-    max_mag = 0.2
-    negative = tf.random.uniform(()) <= 0.5
+    x_mag = mag[0]
+    y_mag = mag[1]
+    transforms = np.array([[1.0, 0.0, 0.0,
+                            0.0, 1.0, 0.0,
+                            0.0, 0.0]])
+    rank = tf.rank(image)  # NHWC, HWC, HW
+    if rank == 3: # hwc
+        h = image.shape[0]
+        w = image.shape[1]
+    elif rank == 4: # nhwc
+        h = image.shape[1]
+        w = image.shape[2]
+        transforms = np.broadcast_to(transforms, [image.shape[0], 8])
+    c = image.shape[-1]
+    assert c == 1 or c == 3, "last column must be rgb or grayscale"
 
-    t = [1.0, 1.0/factor, -250/factor, 0.0, 1.0, 0.0, 0.0, 0.0]
-    image_t = tfa.image.transform(image, t)
+    x_mag = np.clip(x_mag, -2.5, 2.5)
+    y_mag = np.clip(y_mag, -2.5, 2.5)
+    transforms[:, 1] = x_mag
+    transforms[:, 2] = -250 * x_mag
+    transforms[:, 3] = y_mag
+    transforms[:, 5] = -250 * y_mag
+    if rank == 3:
+        transforms = transforms[0]
+
+    image = tfa.image.transform(image, transforms)
     if apply_to_y:
-        label_t = tfa.image.transform(label, t)
+        label = tfa.image.transform(label, transforms)
     return image, label
+
+
+
+
+# def apply_weird_y():
+#     factor = -3e-3
+#     flipped_bw = tf.image.random_flip_left_right(bw_img_rgb)
+#     flipped_bw = tf.image.random_flip_up_down(flipped_bw)
+#     transform = tfa.image.transform(flipped_bw, [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, factor * 1.0, factor * 1.0])
+#     transform = tf.image.random_flip_left_right(transform)
+#     transform = tf.image.random_flip_up_down(transform)
+#     _ = plt.imshow(transform[0])
 
 
 # prob, mag1, mag2 as an kwarg input
