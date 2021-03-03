@@ -180,19 +180,20 @@ def apply_zoom(
     x_mag = mag[0]
     y_mag = mag[1]
     transforms = np.array([[1.0, 0.0, 0.0,
-                              0.0, 1.0, 0.0,
-                              0.0, 0.0]])
-    rank = tf.rank(image)  # NHWC, HWC, HW
-    if rank == 3: # hwc
+                            0.0, 1.0, 0.0,
+                            0.0, 0.0]])
+    rank = tf.rank(image).numpy()  # NHWC, HWC, HW
+    if rank == 3:  # hwc
         h = image.shape[0]
         w = image.shape[1]
-    elif rank == 4: # nhwc
+    elif rank == 4:  # nhwc
         h = image.shape[1]
         w = image.shape[2]
         transforms = np.broadcast_to(transforms, [image.shape[0], 8])
     c = image.shape[-1]
     assert c == 1 or c == 3, "last column must be rgb or grayscale"
 
+    transforms.setflags(write=1)
     transforms[:, 0] = 1.0 / x_mag
     transforms[:, 2] = -(w * (1 - x_mag)) / (2 * x_mag)
     transforms[:, 4] = 1.0 / y_mag
@@ -227,9 +228,10 @@ def apply_skew(
         transforms = np.broadcast_to(transforms, [image.shape[0], 8])
     c = image.shape[-1]
     assert c == 1 or c == 3, "last column must be rgb or grayscale"
-
-    x_mag = np.clip(x_mag, -2.5, 2.5)
-    y_mag = np.clip(y_mag, -2.5, 2.5)
+    
+    x_mag = tf.clip_by_value(x_mag, -2.5, 2.5)
+    y_mag = tf.clip_by_value(y_mag, -2.5, 2.5)
+    transforms.setflags(write=1)
     transforms[:, 1] = x_mag
     transforms[:, 2] = -250 * x_mag
     transforms[:, 3] = y_mag
