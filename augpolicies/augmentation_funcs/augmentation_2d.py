@@ -85,6 +85,7 @@ def flip_randomly_image_pair(
     apply_to_y: bool = False
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
+    assert tf.rank(image).numpy() == 4,  "NHWC format required"
     random_var = tf.random.uniform([]) <= do_prob
     if random_var:
         image = flip_op(image)
@@ -109,6 +110,7 @@ def apply_random_brightness(
     mag: float = 0.2
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
+    assert tf.rank(image).numpy() == 4,  "NHWC format required"
     if tf.random.uniform([]) <= do_prob:
         image = tf.image.random_brightness(image, mag)
     return image, label
@@ -121,6 +123,7 @@ def apply_random_hue(
     mag: float = 0.2
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
+    assert tf.rank(image).numpy() == 4,  "NHWC format required"
     if tf.random.uniform([]) <= do_prob:
         image = tf.image.random_hue(image, mag)
     return image, label
@@ -133,6 +136,7 @@ def apply_random_contrast(
     mag: float = 1.0
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
+    assert tf.rank(image).numpy() == 4,  "NHWC format required"
     if tf.random.uniform(()) <= do_prob:
         image = tf.image.random_contrast(image, 0.0, mag + 0.01)
     return image, label
@@ -169,6 +173,29 @@ def apply_random_contrast(
 #             raise NotImplementedError("Need to get the arguments to feed into both x and y")
 #     return image, label
 
+def apply_random_zoom(
+    image: tfa.types.TensorLike,
+    label: tfa.types.TensorLike,
+    do_prob: float,
+    mag: tfa.types.TensorLike,
+    apply_to_y: bool = False
+) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
+    assert tf.rank(image).numpy() == 4,  "NHWC format required"
+    mag = (1 - (tf.random.uniform((image.shape[0], 2)) - 0.5) * mag)
+    return apply_zoom(image, label, mag, apply_to_y)
+
+
+def apply_random_skew(
+    image: tfa.types.TensorLike,
+    label: tfa.types.TensorLike,
+    do_prob: float,
+    mag: tfa.types.TensorLike,
+    apply_to_y: bool = False
+) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
+    assert tf.rank(image).numpy() == 4,  "NHWC format required"
+    mag = tf.random.uniform((image.shape[0], 2), minval=-1., maxval=1.) * mag
+    return apply_skew(image, label, mag, apply_to_y)
+
 
 def apply_zoom(
     image: tfa.types.TensorLike,
@@ -177,8 +204,12 @@ def apply_zoom(
     apply_to_y: bool = False
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
-    x_mag = mag[0]
-    y_mag = mag[1]
+    if type(mag) is tuple:
+        x_mag = mag[0]
+        y_mag = mag[1]
+    else:
+        x_mag = mag[:, 0]
+        y_mag = mag[:, 1]
     transforms = np.array([[1.0, 0.0, 0.0,
                             0.0, 1.0, 0.0,
                             0.0, 0.0]])
@@ -213,8 +244,12 @@ def apply_skew(
     apply_to_y: bool = False,
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
-    x_mag = mag[0]
-    y_mag = mag[1]
+    if type(mag) is tuple:
+        x_mag = mag[0]
+        y_mag = mag[1]
+    else:
+        x_mag = mag[:, 0]
+        y_mag = mag[:, 1]
     transforms = np.array([[1.0, 0.0, 0.0,
                             0.0, 1.0, 0.0,
                             0.0, 0.0]])
@@ -243,8 +278,6 @@ def apply_skew(
     if apply_to_y:
         label = tfa.image.transform(label, transforms)
     return image, label
-
-
 
 
 # def apply_weird_y():
