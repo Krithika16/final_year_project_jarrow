@@ -1,6 +1,7 @@
 import tensorflow as tf
 from tensorflow import keras
 
+
 def get_compiled_model():
     # Make a simple 2-layer densely-connected neural network.
     inputs = keras.Input(shape=(784,))
