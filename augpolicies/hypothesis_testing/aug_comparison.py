@@ -1,8 +1,8 @@
 from augpolicies.core.mnist import get_mnist, data_generator, get_and_compile_model, SimpleModel
 from augpolicies.core.train.classification_supervised_loop import supervised_train_loop
 from augpolicies.augmentation_policies.baselines import NoAugmentationPolicy, AugmentationPolicy
-from augpolicies.augmentation_funcs.augmentation_2d import apply_random_brightness, apply_random_hue, \
-    apply_random_contrast, apply_random_left_right_flip, apply_random_up_down_flip, apply_random_shear, apply_random_zoom
+from augpolicies.augmentation_funcs.augmentation_2d import apply_random_brightness, \
+    apply_random_contrast, apply_random_left_right_flip, apply_random_up_down_flip, apply_random_skew, apply_random_zoom
 from augpolicies.augmentation_funcs.augmentation_2d import kwargs_func_prob, kwargs_func_prob_mag
 
 import random
@@ -22,19 +22,18 @@ if __name__ == "__main__":
     train, val, test = get_mnist()
     t1 = time.time()
 
-    e = 2
+    e = 50
 
     aug_choices = [
         apply_random_left_right_flip,
         apply_random_up_down_flip,
-        apply_random_brightness,
-        # apply_random_hue, 3 channel
         apply_random_contrast,
-        # apply_random_shear, slow
-        # apply_random_zoom, slow
+        apply_random_skew,
+        apply_random_zoom,
+        apply_random_brightness,
     ]
 
-    for i in range(3):
+    for i in range(5):
         t1 = time.time()
         ap = NoAugmentationPolicy()
         model = get_and_compile_model(SimpleModel)
@@ -51,10 +50,10 @@ if __name__ == "__main__":
     for idx, aug in enumerate(aug_choices):
         aug = [aug_choices[idx]]
         prob = 0.5
-        mag = 0.1
+        mag = 0.0
 
         if idx < 2:
-            for i in range(3):
+            for i in range(5):
                 t1 = time.time()
                 func = [kwargs_func_prob(prob)]
                 ap = AugmentationPolicy(aug, func, num_to_apply=1)
@@ -69,9 +68,9 @@ if __name__ == "__main__":
                                      f"{accs[best_acc_idx]}", f"{val_accs[best_acc_idx]}",
                                      f"{time.time() - t1:.2f}"])
         else:
-            for i in range(11):
+            for i in range(10):
                 t1 = time.time()
-                func = [kwargs_func_prob_mag(do_prob_mean=prob, mag_mean=mag * i)]
+                func = [kwargs_func_prob_mag(do_prob_mean=prob, mag_mean=mag + 0.15 * i)]
                 ap = AugmentationPolicy(aug, func, num_to_apply=1)
                 model = get_and_compile_model(SimpleModel)
                 losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=ap)

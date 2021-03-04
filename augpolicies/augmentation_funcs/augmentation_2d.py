@@ -141,7 +141,8 @@ def apply_random_contrast(
 
     enforce_rank(image)
     if tf.random.uniform(()) <= do_prob:
-        image = tf.image.random_contrast(image, 1 - mag, 1 + mag)
+        lower = 0 if mag > 1 else 1 - mag
+        image = tf.image.random_contrast(image, lower, 1 + mag + 0.001)
     return image, label
 
 
