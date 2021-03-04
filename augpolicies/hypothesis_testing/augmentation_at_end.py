@@ -38,7 +38,7 @@ if __name__ == "__main__":
     e_augs = list(range(e + 1))
 
     import csv
-    with open("aug_at_end_data.csv", 'a', newline='') as csvfile:
+    with open("data/results/aug_at_end_data.csv", 'a', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',',
                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
         writer.writerow(["name", "e", "e_augs", "loss", "val_loss", "acc", "val_acc", "time"])
@@ -54,7 +54,7 @@ if __name__ == "__main__":
                 p = HalfAugmentationPolicy(select_args, e, e_aug, **p_kwargs)
                 losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=p)
                 print(f'Time: {time.time() - t1:.2f}s')
-                with open("aug_at_end_data.csv", 'a', newline='') as csvfile:
+                with open("data/results/aug_at_end_data.csv", 'a', newline='') as csvfile:
                     writer = csv.writer(csvfile, delimiter=',',
                                         quotechar='|', quoting=csv.QUOTE_MINIMAL)
                     best_acc_idx = np.argmax(val_accs)
