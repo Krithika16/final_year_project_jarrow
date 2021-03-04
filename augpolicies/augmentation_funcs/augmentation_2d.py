@@ -4,7 +4,6 @@ import tensorflow_addons as tfa
 import numpy as np
 import random
 import sys
-import random
 from typing import Callable, Tuple
 
 
@@ -55,6 +54,11 @@ def kwargs_func_prob_mag(
         }
     return prob_mag_kwargs
 
+
+def enforce_rank(image):
+    assert tf.rank(image).numpy() == 4, "NHWC format required"
+
+
 # only prob as an kwarg input
 
 
@@ -88,7 +92,7 @@ def flip_randomly_image_pair(
     apply_to_y: bool = False
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
-    assert tf.rank(image).numpy() == 4, "NHWC format required"
+    enforce_rank(image)
     batch_size = image.shape[0]
     flips = tf.reshape(tf.random.categorical(tf.math.log([[1 - do_prob, do_prob]]), batch_size), (batch_size, 1, 1, 1))
     flips = tf.cast(flips, image.dtype)
@@ -109,7 +113,7 @@ def apply_random_brightness(
     mag: float = 0.2
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
-    assert tf.rank(image).numpy() == 4, "NHWC format required"
+    enforce_rank(image)
     if tf.random.uniform([]) <= do_prob:
         image = tf.image.random_brightness(image, mag)
     return image, label
@@ -122,7 +126,7 @@ def apply_random_hue(
     mag: float = 0.2
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
-    assert tf.rank(image).numpy() == 4, "NHWC format required"
+    enforce_rank(image)
     if tf.random.uniform([]) <= do_prob:
         image = tf.image.random_hue(image, mag)
     return image, label
@@ -135,9 +139,9 @@ def apply_random_contrast(
     mag: float = 1.0
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
-    assert tf.rank(image).numpy() == 4, "NHWC format required"
+    enforce_rank(image)
     if tf.random.uniform(()) <= do_prob:
-        image = tf.image.random_contrast(image, 0.0, mag + 0.01)
+        image = tf.image.random_contrast(image, 1 - mag, 1 + mag)
     return image, label
 
 
@@ -145,11 +149,11 @@ def apply_random_zoom(
     image: tfa.types.TensorLike,
     label: tfa.types.TensorLike,
     do_prob: float,
-    mag: tfa.types.TensorLike,
+    mag: float,
     apply_to_y: bool = False
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
-    assert tf.rank(image).numpy() == 4, "NHWC format required"
+    enforce_rank(image)
     mag = (1 - (tf.random.uniform((image.shape[0], 2)) - 0.5) * mag)
     return apply_zoom(image, label, mag, apply_to_y)
 
@@ -158,13 +162,33 @@ def apply_random_skew(
     image: tfa.types.TensorLike,
     label: tfa.types.TensorLike,
     do_prob: float,
-    mag: tfa.types.TensorLike,
+    mag: float,
     apply_to_y: bool = False
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
-    assert tf.rank(image).numpy() == 4, "NHWC format required"
+    enforce_rank(image)
     mag = tf.random.uniform((image.shape[0], 2), minval=-1., maxval=1.) * mag
     return apply_skew(image, label, mag, apply_to_y)
+
+
+# def apply_random_mean_filter(
+#     image: tfa.types.TensorLike,
+#     label: tfa.types.TensorLike,
+#     do_prob: float,
+#     mag: float,
+#     apply_to_y: bool = False
+# ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
+
+#     enforce_rank(image)
+#     batch_size = image.shape[0]
+#     rv = tf.random.categorical(tf.math.log([[1 - do_prob, do_prob]]), batch_size)
+#     rv = tf.reshape(rv, (batch_size, 1, 1, 1))
+#     # rv = tf.broadcast_to(rv, image.shape)
+#     image = tf.where(rv, tfa.image.mean_filter2d(image, filter_shape=int(mag)), image)
+#     if apply_to_y:
+#         label = tf.cast(label, tf.float32)
+#         label = tf.where(rv, tfa.image.mean_filter2d(label, filter_shape=(mag, mag)), label)
+#     return image, label
 
 
 def apply_zoom(
