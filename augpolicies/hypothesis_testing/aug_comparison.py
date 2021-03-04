@@ -24,7 +24,7 @@ if __name__ == "__main__":
         train, val, test = get_mnist()
         t1 = time.time()
 
-        e = 50
+        e = 75
 
         aug_choices = [
             apply_random_left_right_flip,
@@ -71,10 +71,10 @@ if __name__ == "__main__":
                                          f"{time.time() - t1:.2f}"])
             else:
                 for i in range(10):
-                    if aug == "apply_random_skew":
-                        _mag = mag + 0.05 * i
-                    else:
-                        _mag = mag + 0.15 * i
+                    # if aug == "apply_random_skew":
+                    #     _mag = mag + 0.05 * i
+                    # else:
+                    _mag = mag + 0.05 * i
                     _prob = prob
                     t1 = time.time()
                     func = [kwargs_func_prob_mag(do_prob_mean=_prob, mag_mean=_mag)]
