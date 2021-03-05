@@ -56,24 +56,23 @@ if __name__ == "__main__":
 
             if idx < 2:
                 for i in range(5):
+                    _prob = 0.1 * (i + 1)
+                    _mag = 1.0
                     t1 = time.time()
                     func = [kwargs_func_prob(prob)]
                     ap = AugmentationPolicy(aug, func, num_to_apply=1)
                     model = get_and_compile_model(SimpleModel)
                     losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=ap)
-                    with open("aug_comparison.csv", 'a', newline='') as csvfile:
+                    with open("data/results/aug_comparison.csv", 'a', newline='') as csvfile:
                         writer = csv.writer(csvfile, delimiter=',',
                                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
                         best_acc_idx = np.argmax(val_accs)
-                        writer.writerow([aug[0].__name__, f"{m.__name__}", f"{e}", f"{best_acc_idx+1}", f"{prob}", "1.0",
+                        writer.writerow([aug[0].__name__, f"{m.__name__}", f"{e}", f"{best_acc_idx+1}", f"{_prob}", f"{_mag}",
                                          f"{losses[best_acc_idx]}", f"{val_losses[best_acc_idx]}",
                                          f"{accs[best_acc_idx]}", f"{val_accs[best_acc_idx]}",
                                          f"{time.time() - t1:.2f}"])
             else:
                 for i in range(10):
-                    # if aug == "apply_random_skew":
-                    #     _mag = mag + 0.05 * i
-                    # else:
                     _mag = mag + 0.05 * i
                     _prob = prob
                     t1 = time.time()
