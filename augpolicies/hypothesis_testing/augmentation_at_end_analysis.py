@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-df = pd.read_csv("aug_at_end_data.csv")
+df = pd.read_csv("data/results/aug_at_end_data.csv")
 
 df = pd.pivot_table(df, values=['val_acc'], index=['name', 'e_augs'])
 
