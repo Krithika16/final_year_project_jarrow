@@ -142,36 +142,13 @@ def apply_random_contrast(
     return image, label
 
 
-# def apply_random_shear(
-#     image: tfa.types.TensorLike,
-#     label: tfa.types.TensorLike,
-#     do_prob: float = 1.0,
-#     mag: float = 3.0,
-#     apply_to_y: bool = False
-# ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
-
-#     if tf.random.uniform(()) <= do_prob:
-#         image = tf.map_fn(fn=lambda t: tf.keras.preprocessing.image.random_shear(t, mag), elems=image)
-#         if apply_to_y:
-#             raise NotImplementedError("Need to get the arguments to feed into both x and y")
-#     return image, label
-
-
-# def apply_random_zoom(
-#     image: tfa.types.TensorLike,
-#     label: tfa.types.TensorLike,
-#     do_prob: float = 1.0,
-#     mag: float = (2.0, 2.0),
-#     apply_to_y: bool = False
-# ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
-
-#     if type(mag) is float:
-#         mag = (mag, mag)
-#     if tf.random.uniform(()) <= do_prob:
-#         image = tf.map_fn(fn=lambda t: tf.keras.preprocessing.image.random_zoom(t, mag), elems=image)
-#         if apply_to_y:
-#             raise NotImplementedError("Need to get the arguments to feed into both x and y")
-#     return image, label
+def add_space_domain_noise(
+    image: tfa.types.TensorLike,
+    label: tfa.types.TensorLike,
+    do_prob: float = 1.0,
+    mag: float = 1.0
+) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
+    pass
 
 def apply_random_zoom(
     image: tfa.types.TensorLike,
@@ -194,6 +171,18 @@ def apply_random_skew(
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
     assert tf.rank(image).numpy() == 4,  "NHWC format required"
     mag = tf.random.uniform((image.shape[0], 2), minval=-1., maxval=1.) * mag
+
+    samples = tf.random.categorical(tf.math.log([[1-do_prob, do_prob]]), mag.shape[0] * mag.shape[1])
+    samples_mask = tf.reshape(samples, mag.shape)
+    samples_mask = tf.cast(samples_mask, tf.float32)
+
+    print(mag)
+    mag = tf.math.multiply(mag, samples_mask)
+    print(samples_mask)
+    print(mag)
+    print("--------------------------------------------------")
+
+
     return apply_skew(image, label, mag, apply_to_y)
 
 
@@ -212,7 +201,7 @@ def apply_zoom(
         y_mag = mag[:, 1]
     transforms = np.array([[1.0, 0.0, 0.0,
                             0.0, 1.0, 0.0,
-                            0.0, 0.0]])
+                            0.0, 0.0]], dtype=np.float32)
     rank = tf.rank(image).numpy()  # NHWC, HWC, HW
     if rank == 3:  # hwc
         h = image.shape[0]
@@ -248,11 +237,15 @@ def apply_skew(
         x_mag = mag[0]
         y_mag = mag[1]
     else:
-        x_mag = mag[:, 0]
-        y_mag = mag[:, 1]
+        x_mag = mag[:, 0][np.newaxis, :]
+        y_mag = mag[:, 1][np.newaxis, :]
+
+    print(x_mag)
+    print(y_mag)
+
     transforms = np.array([[1.0, 0.0, 0.0,
                             0.0, 1.0, 0.0,
-                            0.0, 0.0]])
+                            0.0, 0.0]], dtype=np.float32)
     rank = tf.rank(image)  # NHWC, HWC, HW
     if rank == 3: # hwc
         h = image.shape[0]
@@ -266,17 +259,31 @@ def apply_skew(
     
     x_mag = tf.clip_by_value(x_mag, -2.5, 2.5)
     y_mag = tf.clip_by_value(y_mag, -2.5, 2.5)
+
+    print("ymag before apply", y_mag)
+
     transforms.setflags(write=1)
+
+    # transform = tf.tensor_scatter_nd_update(transform, [[1]], x_mag)
+    
+    print("tst before apply", transforms[:, 3])
+    tst = tf.tensor_scatter_nd_update(transforms, [[3]], y_mag)
+    print("tst after apply", tst[:, 3])
+
     transforms[:, 1] = x_mag
-    transforms[:, 2] = -250 * x_mag
+    transforms[:, 2] = -w * x_mag
     transforms[:, 3] = y_mag
-    transforms[:, 5] = -250 * y_mag
+    transforms[:, 5] = -h * y_mag
+
+    print("ymag after apply", transforms[:, 3])
+
     if rank == 3:
         transforms = transforms[0]
 
     image = tfa.image.transform(image, transforms)
     if apply_to_y:
         label = tfa.image.transform(label, transforms)
+    print("--------------------------------------------------------------------------------------")
     return image, label
 
 
@@ -299,3 +306,31 @@ def apply_skew(
 #         v2 = tf.random.uniform((), minval=min_quality, maxval=max_quality + 1, dtype=tf.int32)
 #         image = tf.map_fn(fn=lambda t: tf.image.random_jpeg_quality(t, min(v1, v2), max(v1, v2)), elems=image)
 #     return image, label
+
+if __name__ == "__main__":
+    (x_train, _), (_, _) = tf.keras.datasets.fashion_mnist.load_data()
+    x_train = x_train[..., np.newaxis]
+    x_train = x_train[:4]
+    
+
+    func = apply_random_skew
+
+    import matplotlib.pyplot as plt
+
+    mags = [0.0, 0.5, 1.0, 2.0]
+    rs = 3
+    f, axs = plt.subplots(rs*2,len(mags)+1)
+    axs[0][0].imshow(x_train[0])
+
+    for r in range(0, rs*2):
+        axs[r][0].axis('off')
+
+    for idx,m in enumerate(mags):
+        img,_ = func(x_train, 0.0, 0.5, (0.0, m))
+        for r in range(rs):
+
+            axs[r*2][idx+1].imshow(img[r])
+            axs[r*2][idx+1].axis('off')
+            axs[r*2+1][idx+1].imshow(np.abs(img[r] - x_train[r]))
+            axs[r*2+1][idx+1].axis('off')
+    plt.show()
