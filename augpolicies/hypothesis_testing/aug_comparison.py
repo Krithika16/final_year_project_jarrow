@@ -2,7 +2,8 @@ from augpolicies.core.mnist import get_mnist, data_generator, get_and_compile_mo
 from augpolicies.core.train.classification_supervised_loop import supervised_train_loop
 from augpolicies.augmentation_policies.baselines import NoAugmentationPolicy, AugmentationPolicy
 from augpolicies.augmentation_funcs.augmentation_2d import apply_random_brightness, \
-    apply_random_contrast, apply_random_left_right_flip, apply_random_up_down_flip, apply_random_skew, apply_random_zoom
+    apply_random_contrast, apply_random_left_right_flip, apply_random_up_down_flip, apply_random_skew, apply_random_zoom \
+    apply_random_x_skew, apply_random_y_skew, apply_random_x_zoom, apply_random_y_zoom
 from augpolicies.augmentation_funcs.augmentation_2d import kwargs_func_prob, kwargs_func_prob_mag
 
 import random
@@ -24,7 +25,7 @@ if __name__ == "__main__":
         train, val, test = get_mnist()
         t1 = time.time()
 
-        e = 75
+        e = 10
 
         aug_choices = [
             apply_random_left_right_flip,
@@ -32,6 +33,10 @@ if __name__ == "__main__":
             apply_random_contrast,
             apply_random_skew,
             apply_random_zoom,
+            apply_random_x_skew,
+            apply_random_y_skew,
+            apply_random_x_zoom,
+            apply_random_y_zoom,
             apply_random_brightness,
         ]
 

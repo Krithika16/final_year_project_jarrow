@@ -155,12 +155,36 @@ def add_space_domain_noise(
     pass
 
 
+def apply_random_x_zoom(
+    image: tfa.types.TensorLike,
+    label: tfa.types.TensorLike,
+    do_prob: float,
+    mag: float,
+    apply_to_y: bool = False,
+) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
+
+    return apply_random_zoom(image, label, do_prob, mag, apply_to_y, x_mag=True, y_mag=False)
+
+
+def apply_random_y_zoom(
+    image: tfa.types.TensorLike,
+    label: tfa.types.TensorLike,
+    do_prob: float,
+    mag: float,
+    apply_to_y: bool = False,
+) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
+
+    return apply_random_zoom(image, label, do_prob, mag, apply_to_y, x_mag=False, y_mag=True)
+
+
 def apply_random_zoom(
     image: tfa.types.TensorLike,
     label: tfa.types.TensorLike,
     do_prob: float,
     mag: float,
-    apply_to_y: bool = False
+    apply_to_y: bool = False,
+    x_mag: bool = True,
+    y_mag: bool = True,
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
     enforce_rank(image)
@@ -172,7 +196,34 @@ def apply_random_zoom(
 
     mag = tf.math.multiply(mag, samples_mask).numpy()
 
+    if not x_mag:
+        mag[:, 0] = 1.0
+    if not y_mag:
+        mag[:, 1] = 1.0
+
     return apply_zoom(image, label, mag, apply_to_y)
+
+
+def apply_random_x_skew(
+    image: tfa.types.TensorLike,
+    label: tfa.types.TensorLike,
+    do_prob: float,
+    mag: float,
+    apply_to_y: bool = False,
+) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
+
+    return apply_random_skew(image, label, do_prob, mag, apply_to_y, x_mag=True, y_mag=False)
+
+
+def apply_random_y_skew(
+    image: tfa.types.TensorLike,
+    label: tfa.types.TensorLike,
+    do_prob: float,
+    mag: float,
+    apply_to_y: bool = False,
+) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
+
+    return apply_random_skew(image, label, do_prob, mag, apply_to_y, x_mag=False, y_mag=True)
 
 
 def apply_random_skew(
@@ -180,7 +231,9 @@ def apply_random_skew(
     label: tfa.types.TensorLike,
     do_prob: float,
     mag: float,
-    apply_to_y: bool = False
+    apply_to_y: bool = False,
+    x_mag: bool = True,
+    y_mag: bool = True,
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
     enforce_rank(image)
@@ -192,6 +245,11 @@ def apply_random_skew(
 
     mag = tf.math.multiply(mag, samples_mask).numpy()
 
+    if not x_mag:
+        mag[:, 0] = 0.
+    if not y_mag:
+        mag[:, 1] = 0.
+
     return apply_skew(image, label, mag, apply_to_y)
 
 
@@ -202,7 +260,7 @@ def apply_zoom(
     apply_to_y: bool = False
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
-    if type(mag) is tuple or type(mag) is list:
+    if type(mag) is list or type(mag) is tuple:
         x_mag = mag[0]
         y_mag = mag[1]
     else:
@@ -221,6 +279,9 @@ def apply_zoom(
         transforms = np.broadcast_to(transforms, [image.shape[0], 8]).copy()
     c = image.shape[-1]
     assert c == 1 or c == 3, "last column must be rgb or grayscale"
+
+    x_mag = np.clip(x_mag, 0.05, None)
+    y_mag = np.clip(y_mag, 0.05, None)
 
     transforms[:, 0] = 1.0 / x_mag
     transforms[:, 2] = -(w * (1 - x_mag)) / (2 * x_mag)
@@ -242,7 +303,7 @@ def apply_skew(
     apply_to_y: bool = False,
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
-    if type(mag) is list or type(mag) is float:
+    if type(mag) is list or type(mag) is tuple:
         x_mag = mag[0]
         y_mag = mag[1]
     else:
@@ -306,12 +367,11 @@ if __name__ == "__main__":
     x_train = x_train[..., np.newaxis]
     x_train = x_train[:4]
 
-
-    func = apply_random_left_right_flip
+    func = apply_random_x_zoom
 
     import matplotlib.pyplot as plt
 
-    mags = [0.0, 0.25, 0.5, 1.0]
+    mags = [0.0, 0.5, 1.0, 1.2]
     rs = 3
     f, axs = plt.subplots(rs * 2, len(mags) + 1)
     axs[0][0].imshow(x_train[0])
@@ -320,7 +380,7 @@ if __name__ == "__main__":
         axs[r][0].axis('off')
 
     for idx, m in enumerate(mags):
-        img, out_img = func(x_train, x_train, m, apply_to_y=True)
+        img, out_img = func(x_train, 1.0, 1.0, m)
         for r in range(rs):
 
             axs[r * 2][idx + 1].imshow(img[r])
