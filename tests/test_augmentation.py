@@ -1,7 +1,6 @@
 import pytest
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize(
     "e_total, aug_apps, expected_output",
     [
@@ -37,13 +36,11 @@ def test_half_aug_policy_idxes(e_total, aug_apps, expected_output):
     assert idxes == expected_output
 
 
-@pytest.mark.skip
 def test_augs_import():
     import augpolicies.augmentation_funcs.augmentation_1d
     import augpolicies.augmentation_funcs.augmentation_2d
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("func", ['apply_random_left_right_flip', 'apply_random_up_down_flip'])
 @pytest.mark.parametrize('batch', [True])
 @pytest.mark.parametrize('prob', [0.0, 0.5, 1.0])
@@ -107,7 +104,6 @@ def test_random_aug_func_with_apply_to_y(func, batch, prob, mag, apply_to_y, c):
             assert np.array_equal(trans, lab)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("func", ['apply_random_brightness', 'apply_random_contrast'])
 @pytest.mark.parametrize('batch', [True])
 @pytest.mark.parametrize('prob', [0.0, 0.5, 1.0])
