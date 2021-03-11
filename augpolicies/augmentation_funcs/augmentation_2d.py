@@ -1,11 +1,11 @@
-import tensorflow as tf
-from tensorflow.python.ops import array_ops
-import tensorflow_addons as tfa
-import numpy as np
 import random
 import sys
 from typing import Callable, Tuple
 
+import numpy as np
+import tensorflow as tf
+import tensorflow_addons as tfa
+from tensorflow.python.ops import array_ops
 
 # kwarg getter
 
@@ -153,6 +153,62 @@ def add_space_domain_noise(
     mag: float = 1.0
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
     pass
+
+
+def apply_random_rotate(
+    image: tfa.types.TensorLike,
+    label: tfa.types.TensorLike,
+    do_prob: float = 1.0,
+    mag: float = 1.0,
+    apply_to_y: bool = False,
+) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
+
+    enforce_rank(image)
+    angles = tf.random.uniform((image.shape[0],), minval=-1., maxval=1.) * mag
+
+    samples = tf.random.categorical(tf.math.log([[1 - do_prob, do_prob]]), image.shape[0])
+    samples_mask = tf.cast(samples, tf.float32)
+
+    angles = tf.math.multiply(angles, samples_mask).numpy()[0]
+
+    image = tfa.image.rotate(image, angles)
+    if apply_to_y:
+        label = tfa.image.rotate(label, angles)
+    return image, label
+
+
+def apply_random_cutout(
+    image: tfa.types.TensorLike,
+    label: tfa.types.TensorLike,
+    do_prob: float = 1.0,
+    mag: float = 1.0,
+    apply_to_y: bool = False,
+) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
+
+    random_seed = random.randrange(sys.maxsize)
+    enforce_rank(image)
+
+    rank = tf.rank(image).numpy()  # NHWC, HWC, HW
+    if rank == 3:  # hwc
+        h = image.shape[0]
+        w = image.shape[1]
+    elif rank == 4:  # nhwc
+        h = image.shape[1]
+        w = image.shape[2]
+
+    image = np.broadcast_to(image, (image.shape[0], image.shape[1], image.shape[2], 3))
+
+    cutout_w = int(h * 0.5 * mag)
+    cutout_h = int(w * 0.5 * mag)
+    cutout = min(cutout_w, cutout_h)
+    if cutout % 2 == 1:
+        cutout += 1
+
+    if cutout_w > 0 and cutout_h > 0:
+        image = tfa.image.random_cutout(image, (cutout, cutout), constant_values=0, seed=random_seed)
+        if apply_to_y:
+            label = tfa.image.random_cutout(image, (cutout, cutout), constant_values=0, seed=random_seed)
+    return image, label
 
 
 def apply_random_x_zoom(
@@ -367,7 +423,7 @@ if __name__ == "__main__":
     x_train = x_train[..., np.newaxis]
     x_train = x_train[:4]
 
-    func = apply_random_x_zoom
+    func = apply_random_cutout
 
     import matplotlib.pyplot as plt
 
