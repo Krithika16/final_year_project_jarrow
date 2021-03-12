@@ -45,13 +45,13 @@ class ConvModel(tf.keras.Model):
     def __init__(self):
         super(ConvModel, self).__init__()
         self.model_layers = [
-            tf.keras.layers.Conv2D(64, (5,5), activation='relu'),
-            tf.keras.layers.Conv2D(32, (3,3), activation='relu'),
+            tf.keras.layers.Conv2D(64, (5, 5), activation='relu'),
+            tf.keras.layers.Conv2D(32, (3, 3), activation='relu'),
             tf.keras.layers.MaxPooling2D(pool_size=2),
-            tf.keras.layers.Conv2D(32, (3,3), activation='relu'),
+            tf.keras.layers.Conv2D(32, (3, 3), activation='relu'),
             tf.keras.layers.MaxPooling2D(pool_size=2),
             tf.keras.layers.Dropout(0.2),
-            tf.keras.layers.Conv2D(32, (3,3), activation='relu'),
+            tf.keras.layers.Conv2D(32, (3, 3), activation='relu'),
             tf.keras.layers.MaxPooling2D(pool_size=2),
             tf.keras.layers.Dropout(0.2),
             tf.keras.layers.Flatten(),
@@ -102,10 +102,10 @@ if __name__ == "__main__":
     e = 5
 
     def select_args():
-        probs_11 = [p/10 for p in range(11)]
+        probs_11 = [p / 10 for p in range(11)]
         probs_4 = [0.0, 0.1, 0.25, 0.5]
         probs_3 = [0.0, 0.1, 0.2]
-        mags_7 = [p/10 for p in range(7)]
+        mags_7 = [p / 10 for p in range(7)]
         # mags_shear = [p * 5 for p in range(5)]
         # mags_zoom = [p * 0.5 for p in range(5)]
         return [
