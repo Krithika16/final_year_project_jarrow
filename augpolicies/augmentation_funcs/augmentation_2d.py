@@ -196,8 +196,6 @@ def apply_random_cutout(
         h = image.shape[1]
         w = image.shape[2]
 
-    image = np.broadcast_to(image, (image.shape[0], image.shape[1], image.shape[2], 3))
-
     cutout_w = int(h * 0.5 * mag)
     cutout_h = int(w * 0.5 * mag)
     cutout = min(cutout_w, cutout_h)
@@ -205,9 +203,11 @@ def apply_random_cutout(
         cutout += 1
 
     if cutout_w > 0 and cutout_h > 0:
+        tf.random.set_seed(random_seed)
         image = tfa.image.random_cutout(image, (cutout, cutout), constant_values=0, seed=random_seed)
         if apply_to_y:
-            label = tfa.image.random_cutout(image, (cutout, cutout), constant_values=0, seed=random_seed)
+            tf.random.set_seed(random_seed)
+            label = tfa.image.random_cutout(label, (cutout, cutout), constant_values=0, seed=random_seed)
     return image, label
 
 
@@ -421,9 +421,9 @@ def apply_skew(
 if __name__ == "__main__":
     (x_train, _), (_, _) = tf.keras.datasets.fashion_mnist.load_data()
     x_train = x_train[..., np.newaxis]
-    x_train = x_train[:4]
+    x_train = x_train[:64]
 
-    func = apply_random_cutout
+    func = apply_random_skew
 
     import matplotlib.pyplot as plt
 
@@ -435,13 +435,19 @@ if __name__ == "__main__":
     for r in range(0, rs * 2):
         axs[r][0].axis('off')
 
+    import time
+
+    t0 = time.time()
+
     for idx, m in enumerate(mags):
-        img, out_img = func(x_train, 1.0, 1.0, m)
+        img, out_img = func(x_train, x_train, 1.0, m, apply_to_y=True)
         for r in range(rs):
 
             axs[r * 2][idx + 1].imshow(img[r])
             axs[r * 2][idx + 1].axis('off')
-            axs[r * 2 + 1][idx + 1].imshow(np.abs(img[r] - x_train[r]))
-            # axs[r * 2 + 1][idx + 1].imshow(out_img[r])
+            # axs[r * 2 + 1][idx + 1].imshow(np.abs(img[r] - x_train[r]))
+            axs[r * 2 + 1][idx + 1].imshow(out_img[r])
             axs[r * 2 + 1][idx + 1].axis('off')
+
+    print(f"time took: {time.time() - t0:.2f}")
     plt.show()

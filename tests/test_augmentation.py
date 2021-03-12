@@ -72,7 +72,7 @@ def test_random_aug_func_with_apply_to_y_no_mag(func, batch, prob, apply_to_y, c
             assert np.array_equal(trans, lab)
 
 
-@pytest.mark.parametrize("func", ['apply_random_zoom', 'apply_random_skew'])
+@pytest.mark.parametrize("func", ['apply_random_zoom', 'apply_random_skew', 'apply_random_rotate', 'apply_random_cutout'])
 @pytest.mark.parametrize('batch', [True])
 @pytest.mark.parametrize('prob', [0.0, 0.5, 1.0])
 @pytest.mark.parametrize('mag', [0, 0.5, 1.0])

@@ -20,7 +20,7 @@ with open("data/results/aug_comparison.csv", 'a', newline='') as csvfile:
 if __name__ == "__main__":
     from augpolicies.core.util import set_memory_growth
 
-    for m in [SimpleModel, ConvModel]:
+    for m in [ConvModel, SimpleModel]:
 
         train, val, test = get_mnist()
         t1 = time.time()
@@ -28,6 +28,7 @@ if __name__ == "__main__":
         e = 75
 
         aug_choices = [
+            apply_random_cutout,
             apply_random_left_right_flip,
             apply_random_up_down_flip,
             apply_random_contrast,
@@ -39,7 +40,6 @@ if __name__ == "__main__":
             apply_random_y_zoom,
             apply_random_brightness,
             apply_random_rotate,
-            apply_random_cutout,
         ]
 
         for i in range(5):
