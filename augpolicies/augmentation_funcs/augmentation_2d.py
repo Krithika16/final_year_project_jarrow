@@ -56,7 +56,7 @@ def kwargs_func_prob_mag(
 
 
 def enforce_rank(image):
-    assert tf.rank(image).numpy() == 4, "NHWC format required"
+    assert len(image.shape) == 4, "NHWC format required"
 
 
 # only prob as an kwarg input
@@ -94,13 +94,13 @@ def flip_randomly_image_pair(
 
     enforce_rank(image)
     batch_size = image.shape[0]
-    flips = tf.reshape(tf.random.categorical(tf.math.log([[1 - do_prob, do_prob]]), batch_size), (batch_size, 1, 1, 1))
+    flips = tf.reshape(tf.random.categorical(tf.math.log([[1. - do_prob, do_prob]]), batch_size), (batch_size, 1, 1, 1))
     flips = tf.cast(flips, image.dtype)
     flipped_input = array_ops.reverse(image, [flip_index + 1])
-    image = flips * flipped_input + (1 - flips) * image
+    image = flips * flipped_input + (1. - flips) * image
     if apply_to_y:
         flipped_input = array_ops.reverse(label, [flip_index + 1])
-        label = flips * flipped_input + (1 - flips) * label
+        label = flips * flipped_input + (1. - flips) * label
     return image, label
 
 
@@ -141,8 +141,8 @@ def apply_random_contrast(
 
     enforce_rank(image)
     if tf.random.uniform(()) <= do_prob:
-        lower = 0 if mag > 1 else 1 - mag
-        image = tf.image.random_contrast(image, lower, 1 + mag + 0.001)
+        lower = 0. if mag > 1. else 1. - mag
+        image = tf.image.random_contrast(image, lower, 1. + mag + 0.001)
     return image, label
 
 
@@ -188,7 +188,7 @@ def apply_random_cutout(
     random_seed = random.randrange(sys.maxsize)
     enforce_rank(image)
 
-    rank = tf.rank(image).numpy()  # NHWC, HWC, HW
+    rank = len(image.shape)  # NHWC, HWC, HW
     if rank == 3:  # hwc
         h = image.shape[0]
         w = image.shape[1]
@@ -325,7 +325,7 @@ def apply_zoom(
     transforms = np.array([[1.0, 0.0, 0.0,
                             0.0, 1.0, 0.0,
                             0.0, 0.0]], dtype=np.float32)
-    rank = tf.rank(image).numpy()  # NHWC, HWC, HW
+    rank = len(image.shape)  # NHWC, HWC, HW
     if rank == 3:  # hwc
         h = image.shape[0]
         w = image.shape[1]
@@ -369,7 +369,7 @@ def apply_skew(
     transforms = np.array([[1.0, 0.0, 0.0,
                             0.0, 1.0, 0.0,
                             0.0, 0.0]], dtype=np.float32)
-    rank = tf.rank(image)  # NHWC, HWC, HW
+    rank = len(image.shape)  # NHWC, HWC, HW
     if rank == 3:  # hwc
         h = image.shape[0]
         w = image.shape[1]

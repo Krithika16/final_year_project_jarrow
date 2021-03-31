@@ -7,11 +7,15 @@ from augpolicies.augmentation_funcs.augmentation_2d import apply_random_brightne
 from augpolicies.augmentation_funcs.augmentation_2d import kwargs_func_prob, kwargs_func_prob_mag
 
 import random
+import tensorflow as tf
 import numpy as np
+from icecream import ic
 import time
 import csv
 
-with open("data/results/aug_comparison.csv", 'a', newline='') as csvfile:
+file_name = "data/results/aug_comparison.csv"
+
+with open(file_name, 'w', newline='') as csvfile:
     writer = csv.writer(csvfile, delimiter=',',
                         quotechar='|', quoting=csv.QUOTE_MINIMAL)
     writer.writerow(["aug", "model", "e", "early_stop_e", "prob", "mag", "loss", "val_loss", "acc", "val_acc", "time"])
@@ -23,8 +27,8 @@ if __name__ == "__main__":
     train, val, test = get_mnist()
     t1 = time.time()
 
-    e = 15
-    estop = 5
+    e = 75
+    estop = 3
 
     aug_choices = [
         apply_random_left_right_flip,
@@ -38,62 +42,72 @@ if __name__ == "__main__":
         apply_random_y_zoom,
         apply_random_brightness,
         apply_random_rotate,
-        apply_random_cutout,
+        # apply_random_cutout,
     ]
 
-    # for i in range(5):
-    #     for m in [SimpleModel, ConvModel]:
-    #         t1 = time.time()
-    #         ap = NoAugmentationPolicy()
-    #         model = get_and_compile_model(m, lr=0.002)
-    #         losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=ap, early_stop=estop)
-    #         with open("data/results/aug_comparison.csv", 'a', newline='') as csvfile:
-    #             writer = csv.writer(csvfile, delimiter=',',
-    #                                 quotechar='|', quoting=csv.QUOTE_MINIMAL)
-    #             best_acc_idx = np.argmax(val_accs)
-    #             writer.writerow(["No Aug", f"{m.__name__}", f"{e}", f"{best_acc_idx+1}", "0", "0",
-    #                              f"{losses[best_acc_idx]}", f"{val_losses[best_acc_idx]}",
-    #                              f"{accs[best_acc_idx]}", f"{val_accs[best_acc_idx]}",
-    #                              f"{time.time() - t1:.2f}"])
+    for i in range(2):
+        for m in [SimpleModel, ConvModel]:
+            t1 = time.time()
+            ap = NoAugmentationPolicy()
+            model = get_and_compile_model(m, lr=0.002)
+            losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=ap, early_stop=estop)
+            with open(file_name, 'a', newline='') as csvfile:
+                writer = csv.writer(csvfile, delimiter=',',
+                                    quotechar='|', quoting=csv.QUOTE_MINIMAL)
+                best_acc_idx = np.argmax(val_accs)
+                writer.writerow(["No Aug", f"{m.__name__}", f"{e}", f"{best_acc_idx+1}", "0", "0",
+                                 f"{losses[best_acc_idx]}", f"{val_losses[best_acc_idx]}",
+                                 f"{accs[best_acc_idx]}", f"{val_accs[best_acc_idx]}",
+                                 f"{time.time() - t1:.2f}"])
+
+    batch_size = 256
 
     for idx, aug in enumerate(aug_choices):
-        aug = [aug_choices[idx]]
+        aug = aug_choices[idx]
         prob = 0.5
-        mag = 0.0
+        mag = 0.05
 
         if idx < 2:
-            for i in range(5):
+            for i in range(3):
                 for m in [SimpleModel, ConvModel]:
                     _prob = 0.1 * (i + 1)
                     _mag = 1.0
+                    _prob = tf.constant(_prob)
+                    _mag = tf.constant(_mag)
                     t1 = time.time()
                     func = [kwargs_func_prob(prob)]
-                    ap = AugmentationPolicy(aug, func, num_to_apply=1)
+                    ap = AugmentationPolicy([aug], func, num_to_apply=1)
                     model = get_and_compile_model(m, lr=0.002)
-                    losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=ap, early_stop=estop)
-                    with open("data/results/aug_comparison.csv", 'a', newline='') as csvfile:
+                    losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=ap,
+                                                                               early_stop=estop, batch_size=batch_size)
+                    with open(file_name, 'a', newline='') as csvfile:
                         writer = csv.writer(csvfile, delimiter=',',
                                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
                         best_acc_idx = np.argmax(val_accs)
-                        writer.writerow([aug[0].__name__, f"{m.__name__}", f"{e}", f"{best_acc_idx+1}", f"{_prob}", f"{_mag}",
+                        writer.writerow([aug.__name__, f"{m.__name__}", f"{e}", f"{best_acc_idx+1}", f"{_prob}", f"{_mag}",
                                          f"{losses[best_acc_idx]}", f"{val_losses[best_acc_idx]}",
                                          f"{accs[best_acc_idx]}", f"{val_accs[best_acc_idx]}",
                                          f"{time.time() - t1:.2f}"])
         else:
-            for i in range(3):
+            for i in range(5):
                 for m in [SimpleModel, ConvModel]:
+                    aug_ = aug
+                    ic(aug_)
                     _mag = mag + 0.05 * i
                     _prob = prob
+                    _prob = tf.constant(_prob)
+                    _mag = tf.constant(_mag)
                     t1 = time.time()
                     func = [kwargs_func_prob_mag(do_prob_mean=_prob, mag_mean=_mag)]
-                    ap = AugmentationPolicy(aug, func, num_to_apply=1)
+                    ap = AugmentationPolicy([aug_], func, num_to_apply=1)
                     model = get_and_compile_model(m, lr=0.002)
-                    losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=ap, early_stop=estop)
-                    with open("data/results/aug_comparison.csv", 'a', newline='') as csvfile:
+                    losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=ap,
+                                                                               early_stop=estop, batch_size=batch_size)
+                    with open(file_name, 'a', newline='') as csvfile:
                         writer = csv.writer(csvfile, delimiter=',',
                                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
                         best_acc_idx = np.argmax(val_accs)
-                        writer.writerow([aug[0].__name__, f"{m.__name__}", f"{e}", f"{best_acc_idx+1}", f"{_prob}", f"{_mag}",
+                        writer.writerow([aug.__name__, f"{m.__name__}", f"{e}", f"{best_acc_idx+1}", f"{_prob}", f"{_mag}",
                                          f"{losses[best_acc_idx]}", f"{val_losses[best_acc_idx]}",
                                          f"{accs[best_acc_idx]}", f"{val_accs[best_acc_idx]}",
                                          f"{time.time() - t1:.2f}"])
