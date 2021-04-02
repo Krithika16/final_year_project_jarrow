@@ -65,7 +65,7 @@ for idx, aug in enumerate(aug_choices):
     prob = 0.5
     mag = 0.0
 
-    if idx < 2:
+    if aug is apply_random_left_right_flip or aug is apply_random_up_down_flip:
         for i in range(3):
             for m in [SimpleModel, ConvModel]:
                 _prob = 0.1 * (i + 1)
