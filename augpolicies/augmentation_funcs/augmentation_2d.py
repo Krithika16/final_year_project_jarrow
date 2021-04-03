@@ -56,7 +56,7 @@ def kwargs_func_prob_mag(
 
 
 def enforce_rank(image):
-    assert len(image.shape) == 4, "NHWC format required"
+    assert len(image.shape) == 4, f"NHWC format required, observed rank: {len(image.shape)} for shape: {image.shape}"
 
 
 # only prob as an kwarg input
@@ -94,13 +94,14 @@ def flip_randomly_image_pair(
 
     enforce_rank(image)
     batch_size = image.shape[0]
+    do_prob = do_prob * tf.constant(0.5)
     flips = tf.reshape(tf.random.categorical(tf.math.log([[1. - do_prob, do_prob]]), batch_size), (batch_size, 1, 1, 1))
     flips = tf.cast(flips, image.dtype)
     flipped_input = array_ops.reverse(image, [flip_index + 1])
-    image = flips * flipped_input + (1. - flips) * image
+    image = flips * flipped_input + (1 - flips) * image
     if apply_to_y:
         flipped_input = array_ops.reverse(label, [flip_index + 1])
-        label = flips * flipped_input + (1. - flips) * label
+        label = flips * flipped_input + (1 - flips) * label
     return image, label
 
 

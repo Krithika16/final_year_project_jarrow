@@ -2,7 +2,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-df = pd.read_csv("data/results/all_aug_comparison.csv")
+df = pd.read_csv("data/results/aug_comparison.csv")
+
+from augpolicies.core.util.parse_args import get_dataset_from_args
+dataset = get_dataset_from_args()
+try:
+    df = df[df['dataset' == dataset.__name__]]
+except KeyError:
+    pass
 
 df = df.sort_values('val_acc')
 
