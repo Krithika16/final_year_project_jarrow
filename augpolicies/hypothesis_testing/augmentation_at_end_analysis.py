@@ -41,7 +41,7 @@ for a_idx, a in enumerate(augs):
                 a_.yaxis.set_label_position("right")
                 a_.set_ylabel(m)
 
-plt.legend(['end', 'start', 'interval'])
-plt.savefig("aug_at_end")
+ax[0, 0].legend(['end', 'start', 'interval'])
 plt.tight_layout()
+plt.savefig("aug_at_end")
 plt.show()

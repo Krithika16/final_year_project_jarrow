@@ -21,23 +21,23 @@ file_name = "data/results/aug_at_end_data.csv"
 
 aug_choices = [
     apply_random_left_right_flip,
-    apply_random_up_down_flip,
+    # apply_random_up_down_flip,
     apply_random_contrast,
     apply_random_skew,
     apply_random_zoom,
-    apply_random_x_skew,
-    apply_random_y_skew,
-    apply_random_x_zoom,
-    apply_random_y_zoom,
+    # apply_random_x_skew,
+    # apply_random_y_skew,
+    # apply_random_x_zoom,
+    # apply_random_y_zoom,
     apply_random_brightness,
     apply_random_rotate,
     # apply_random_cutout,
 ]
 
-models = [SimpleModel, ConvModel]
+models = [SimpleModel, ConvModel] # [SimpleModel, ConvModel]
 batch_size = 256
 
-e = 50
+e = 40
 e_augs = list(range(0, e + 1, 10))
 
 try:
@@ -56,7 +56,7 @@ mag = 0.1
 
 for aug in aug_choices:
     for m in models:
-        for _ in range(1):  # repeats
+        for _ in range(3):  # repeats
             for n, p_kwargs in zip(names, policies):
                 for e_aug in e_augs:
                     print(f"{aug.__name__} - {m.__name__} - {n} - {e_aug}")

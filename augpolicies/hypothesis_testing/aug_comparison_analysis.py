@@ -49,4 +49,5 @@ ax2.title.set_text('Conv Model')
 
 plt.tight_layout()
 plt.legend()
+plt.savefig("aug_comparison")
 plt.show()
