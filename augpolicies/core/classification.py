@@ -71,6 +71,16 @@ class ConvModel(tf.keras.Model):
         return x
 
 
+class EfficientNetB0:
+    def __init__(self):
+        self.model = tf.keras.models.Sequential([
+            tf.keras.applications.EfficientNetB0(include_top=False, weights=None, input_tensor=None,
+                                                 input_shape=None, pooling='max', classes=1000,
+                                                 classifier_activation='softmax'),
+        ])
+        
+
+
 class SimpleModel(tf.keras.Model):
     def __init__(self):
         super(SimpleModel, self).__init__()

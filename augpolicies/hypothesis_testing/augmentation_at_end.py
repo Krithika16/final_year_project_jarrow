@@ -34,7 +34,7 @@ aug_choices = [
     # apply_random_cutout,
 ]
 
-models = [SimpleModel, ConvModel] # [SimpleModel, ConvModel]
+models = [SimpleModel, ConvModel]  # [SimpleModel, ConvModel]
 batch_size = 256
 
 e = 40
