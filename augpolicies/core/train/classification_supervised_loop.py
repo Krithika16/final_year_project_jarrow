@@ -1,3 +1,4 @@
+from augpolicies.core.util.reshape import make_3d, pad_to_min_size
 import time
 import tensorflow as tf
 import numpy as np
@@ -61,9 +62,23 @@ def get_lr_decay_closure(total_epochs: int, e_decay: int, *,
     # lr at start after the warm up
     # min lr
     # lr during warmup, lr_warmup -> lr_start
-    def lr_func():
 
-        pass
+    warmup_epoch_length = int(total_epochs * warmup_proportion)
+
+    def lr_func(current_epoch, best_loss_at, learning_rate):
+        if current_epoch <= warmup_epoch_length - 1:
+            # warmup here
+            warmup_done = (warmup_epoch_length - current_epoch) / warmup_epoch_length
+            updated_learning_rate = lr_warmup * (1 - warmup_done) + lr_start * (warmup_done)
+        else:
+            # main loop with lr decay
+            if current_epoch - best_loss_at >= e_decay:
+                temp_learning_rate = learning_rate * lr_decay_factor
+                if temp_learning_rate >= lr_min:
+                    updated_learning_rate = temp_learning_rate
+            else:
+                updated_learning_rate = learning_rate
+        return updated_learning_rate
     return lr_func
 
 
@@ -76,6 +91,13 @@ def supervised_train_loop(model, train, val, data_generator, *, augmentation_pol
     train_acc_results = []
     train_val_acc_results = []
 
+    if model.requires_3d:
+        train = make_3d(train)
+        val = make_3d(val)
+
+    train = pad_to_min_size(train, model.min_size)
+    val = pad_to_min_size(val, model.min_size)
+
     train_ds = tf.data.Dataset.from_generator(data_generator, (tf.float32, tf.int32), args=(*train, batch_size, True))
     val_ds = tf.data.Dataset.from_generator(data_generator, (tf.float32, tf.int32), args=(*val, batch_size, False))
 
@@ -87,6 +109,9 @@ def supervised_train_loop(model, train, val, data_generator, *, augmentation_pol
     t0 = time.time()
     for e in range(epochs):
 
+        if lr_decay:
+            optimizer.lr = lr_decay(e, best_loss_at, optimizer.lr)
+
         e_loss_avg, e_val_loss_avg, e_acc, e_val_acc = epoch(train_ds, val_ds, model, augmentation_policy, e, train_step_fn, loss=loss, optimizer=optimizer)
 
         train_loss_results.append(e_loss_avg)
@@ -95,9 +120,7 @@ def supervised_train_loop(model, train, val, data_generator, *, augmentation_pol
         train_val_acc_results.append(e_val_acc)
         if debug:
             print(f"{e+1:03d}/{epochs:03d}: Loss: {train_loss_results[-1]:.3f}, Val Loss: {train_val_loss_results[-1]:.3f}, Acc: {train_acc_results[-1]:.3f}, Val Acc: {train_val_acc_results[-1]:.3f}, Time so far: {time.time() - t0:.1f}")
-            pass
-        if lr_decay:
-            optimizer.lr = lr_decay(e, optimizer.lr)
+
         if early_stop:
             if e_val_loss_avg < best_loss:
                 best_loss = e_val_loss_avg

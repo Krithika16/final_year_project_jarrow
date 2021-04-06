@@ -48,6 +48,8 @@ def data_generator(x, y, batch_size=32, train=True):
 class ConvModel(tf.keras.Model):
     def __init__(self):
         super(ConvModel, self).__init__()
+        self.requires_3d = False
+        self.min_size = (28, 28)
         self.m_ = tf.keras.models.Sequential([
             tf.keras.layers.Conv2D(64, (5, 5), activation='relu'),
             tf.keras.layers.Conv2D(32, (3, 3), activation='relu'),
@@ -72,6 +74,8 @@ class ConvModel(tf.keras.Model):
 class EfficientNetB0(tf.keras.Model):
     def __init__(self):
         super(EfficientNetB0, self).__init__()
+        self.requires_3d = True
+        self.min_size = (32, 32)
         self.m_ = tf.keras.models.Sequential([
             tf.keras.applications.EfficientNetB0(include_top=False, weights=None, input_tensor=None,
                                                  input_shape=None, pooling='max', classes=1000,
@@ -88,6 +92,8 @@ class EfficientNetB0(tf.keras.Model):
 class SimpleModel(tf.keras.Model):
     def __init__(self):
         super(SimpleModel, self).__init__()
+        self.requires_3d = False
+        self.min_size = (28, 28)
         self.m_ = tf.keras.models.Sequential([
             tf.keras.layers.Flatten(),
             tf.keras.layers.Dense(128, activation='relu'),
@@ -101,6 +107,8 @@ class SimpleModel(tf.keras.Model):
 class SimpleModel_Softmax(tf.keras.Model):
     def __init__(self):
         super(SimpleModel_Softmax, self).__init__()
+        self.requires_3d = False
+        self.min_size = (28, 28)
         self.m_ = tf.keras.models.Sequential([
             tf.keras.layers.Flatten(),
             tf.keras.layers.Dense(128, activation='relu'),

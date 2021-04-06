@@ -17,7 +17,7 @@ from augpolicies.core.classification import (ConvModel, SimpleModel, SimpleModel
                                              get_and_compile_model,
                                              get_classificaiton_data)
 from augpolicies.core.train.classification_supervised_loop import \
-    supervised_train_loop
+    supervised_train_loop, get_lr_decay_closure
 from augpolicies.core.util import set_memory_growth
 
 file_name = "data/results/aug_comparison.csv"
@@ -31,13 +31,25 @@ except FileExistsError:
     pass
 
 e = 40
-estop = 5
+estop = 9
 batch_size = 256
 repeat = 3
 
+lr_decay = 3
+lr_decay_factor = 0.9
+lr_warmup = 1e-5
+lr_start = 1e-3
+lr_min = 1e-5
+lr_warmup_prop = 0.05
+
+
+lr_decay = get_lr_decay_closure(e, lr_decay, lr_decay_factor=lr_decay_factor,
+                                lr_start=lr_start, lr_min=lr_min,
+                                lr_warmup=lr_warmup, warmup_proportion=lr_warmup_prop)
+
 aug_choices = [
     apply_random_left_right_flip,
-    # apply_random_up_down_flip,
+    apply_random_up_down_flip,
     apply_random_contrast,
     apply_random_skew,
     apply_random_zoom,
@@ -63,7 +75,7 @@ for _ in range(repeat):
             model = get_and_compile_model(m, lr=0.002, from_logits=m is not SimpleModel_Softmax)
             train, val, test = get_classificaiton_data(dataset=dataset)
             losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=ap,
-                                                                       early_stop=estop, batch_size=batch_size)
+                                                                       early_stop=estop, batch_size=batch_size)#, lr_decay=lr_decay)
             with open(file_name, 'a', newline='') as csvfile:
                 writer = csv.writer(csvfile, delimiter=',',
                                     quotechar='|', quoting=csv.QUOTE_MINIMAL)
@@ -91,7 +103,7 @@ for _ in range(repeat):
                     model = get_and_compile_model(m, lr=0.002)
                     train, val, test = get_classificaiton_data(dataset=dataset)
                     losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=ap,
-                                                                               early_stop=estop, batch_size=batch_size)
+                                                                               early_stop=estop, batch_size=batch_size)#, lr_decay=lr_decay)
                     with open(file_name, 'a', newline='') as csvfile:
                         writer = csv.writer(csvfile, delimiter=',',
                                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
@@ -115,7 +127,7 @@ for _ in range(repeat):
                         model = get_and_compile_model(m, lr=0.002)
                         train, val, test = get_classificaiton_data(dataset=dataset)
                         losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=ap,
-                                                                                   early_stop=estop, batch_size=batch_size)
+                                                                                   early_stop=estop, batch_size=batch_size)#, lr_decay=lr_decay)
                         with open(file_name, 'a', newline='') as csvfile:
                             writer = csv.writer(csvfile, delimiter=',',
                                                 quotechar='|', quoting=csv.QUOTE_MINIMAL)
