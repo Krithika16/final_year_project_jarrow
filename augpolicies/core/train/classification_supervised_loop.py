@@ -23,11 +23,9 @@ def val_step(model, inputs, targets, loss_func):
     return loss, pred
 
 
-def eval_loop(val_ds, model, loss=None):
+def eval_loop(val_ds, model, loss):
     e_val_loss_avg = tf.keras.metrics.Mean()
     e_val_acc = tf.keras.metrics.SparseCategoricalAccuracy()
-    if loss is None:
-        loss = model.loss
     for x, y in val_ds:
         val_loss, val_pred = val_step(model, x, y, loss)
         e_val_loss_avg.update_state(val_loss)
@@ -36,20 +34,16 @@ def eval_loop(val_ds, model, loss=None):
 
 
 def epoch(train_ds, val_ds, model, augmentation_policy, epoch_number, train_step_fn,
-          loss=None, optimizer=None):
+          loss, optimizer):
     e_loss_avg = tf.keras.metrics.Mean()
     e_acc = tf.keras.metrics.SparseCategoricalAccuracy()
-    if optimizer is None:
-        optimizer = model.optimizer
-    if loss is None:
-        loss = model.loss
     for x, y in train_ds:
         if augmentation_policy is not None:
             x, y = augmentation_policy((x, y, epoch_number))
         tr_loss, tr_pred = train_step_fn(model, x, y, optimizer, loss)
         e_loss_avg.update_state(tr_loss)
         e_acc.update_state(y, tr_pred)
-    e_val_loss_avg, e_val_acc = eval_loop(val_ds, model)
+    e_val_loss_avg, e_val_acc = eval_loop(val_ds, model, loss)
     return e_loss_avg.result(), e_val_loss_avg, e_acc.result(), e_val_acc
 
 
@@ -66,10 +60,11 @@ def get_lr_decay_closure(total_epochs: int, e_decay: int, *,
     warmup_epoch_length = int(total_epochs * warmup_proportion)
 
     def lr_func(current_epoch, best_loss_at, learning_rate):
+        updated_learning_rate = learning_rate
         if current_epoch <= warmup_epoch_length - 1:
             # warmup here
-            warmup_done = (warmup_epoch_length - current_epoch) / warmup_epoch_length
-            updated_learning_rate = lr_warmup * (1 - warmup_done) + lr_start * (warmup_done)
+            warmup_left = (warmup_epoch_length - 1 - current_epoch) / (warmup_epoch_length - 1)
+            updated_learning_rate = lr_warmup * (warmup_left) + lr_start * (1 - warmup_left)
         else:
             # main loop with lr decay
             if current_epoch - best_loss_at >= e_decay:
@@ -106,6 +101,11 @@ def supervised_train_loop(model, train, val, data_generator, *, augmentation_pol
     best_loss = np.inf
     best_loss_at = -1
 
+    if optimizer is None:
+        optimizer = model.optimizer
+    if loss is None:
+        loss = model.loss
+
     t0 = time.time()
     for e in range(epochs):
 
@@ -119,7 +119,9 @@ def supervised_train_loop(model, train, val, data_generator, *, augmentation_pol
         train_acc_results.append(e_acc)
         train_val_acc_results.append(e_val_acc)
         if debug:
-            print(f"{e+1:03d}/{epochs:03d}: Loss: {train_loss_results[-1]:.3f}, Val Loss: {train_val_loss_results[-1]:.3f}, Acc: {train_acc_results[-1]:.3f}, Val Acc: {train_val_acc_results[-1]:.3f}, Time so far: {time.time() - t0:.1f}")
+            print(f"{e+1:03d}/{epochs:03d}: Loss: {train_loss_results[-1]:.3f},",
+                  f"Val Loss: {train_val_loss_results[-1]:.3f}, Acc: {train_acc_results[-1]:.3f},",
+                  f"Val Acc: {train_val_acc_results[-1]:.3f}, Time so far: {time.time() - t0:.1f}")
 
         if early_stop:
             if e_val_loss_avg < best_loss:

@@ -1,6 +1,8 @@
 from augpolicies.core.util import set_memory_growth
-from augpolicies.core.classification import get_classificaiton_data, data_generator, get_and_compile_model, SimpleModel, ConvModel
-from augpolicies.core.train.classification_supervised_loop import supervised_train_loop
+from augpolicies.core.classification import (get_classificaiton_data, data_generator,
+                                             get_and_compile_model,
+                                             SimpleModel, ConvModel, EfficientNetB0)
+from augpolicies.core.train.classification_supervised_loop import supervised_train_loop, get_lr_decay_closure
 from augpolicies.augmentation_policies.baselines import HalfAugmentationPolicy
 from augpolicies.augmentation_funcs.augmentation_2d import kwargs_func_prob, kwargs_func_prob_mag
 from augpolicies.augmentation_funcs.augmentation_2d import apply_random_brightness, \
@@ -19,9 +21,25 @@ dataset = get_dataset_from_args()
 
 file_name = "data/results/aug_at_end_data.csv"
 
+e = 40
+e_augs = list(range(0, e + 1, 10))
+batch_size = 256
+
+lr_decay = 3
+lr_decay_factor = 0.5
+lr_warmup = 1e-5
+lr_start = 1e-3
+lr_min = 1e-5
+lr_warmup_prop = 0.1
+
+
+lr_decay = get_lr_decay_closure(e, lr_decay, lr_decay_factor=lr_decay_factor,
+                                lr_start=lr_start, lr_min=lr_min,
+                                lr_warmup=lr_warmup, warmup_proportion=lr_warmup_prop)
+
 aug_choices = [
     apply_random_left_right_flip,
-    # apply_random_up_down_flip,
+    apply_random_up_down_flip,
     apply_random_contrast,
     apply_random_skew,
     apply_random_zoom,
@@ -34,11 +52,7 @@ aug_choices = [
     # apply_random_cutout,
 ]
 
-models = [SimpleModel, ConvModel]  # [SimpleModel, ConvModel]
-batch_size = 256
-
-e = 40
-e_augs = list(range(0, e + 1, 10))
+models = [SimpleModel, ConvModel, EfficientNetB0]
 
 try:
     with open(file_name, 'x', newline='') as csvfile:
@@ -73,7 +87,7 @@ for _ in range(3):  # repeats
                         func = [kwargs_func_prob_mag(do_prob_mean=prob, mag_mean=_mag)]
 
                     p = HalfAugmentationPolicy([aug], func, e, e_aug, num_to_apply=1, **p_kwargs)
-                    losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=p, batch_size=batch_size)
+                    losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=p, batch_size=batch_size, lr_decay=lr_decay)
                     print(f'Time: {time.time() - t1:.2f}s')
                     with open(file_name, 'a', newline='') as csvfile:
                         writer = csv.writer(csvfile, delimiter=',',

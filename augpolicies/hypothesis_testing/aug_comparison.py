@@ -12,7 +12,7 @@ from augpolicies.augmentation_funcs.augmentation_2d import (
     kwargs_func_prob, kwargs_func_prob_mag)
 from augpolicies.augmentation_policies.baselines import (AugmentationPolicy,
                                                          NoAugmentationPolicy)
-from augpolicies.core.classification import (ConvModel, SimpleModel, SimpleModel_Softmax, EfficientNetB0,
+from augpolicies.core.classification import (ConvModel, SimpleModel, EfficientNetB0,
                                              data_generator,
                                              get_and_compile_model,
                                              get_classificaiton_data)
@@ -36,11 +36,11 @@ batch_size = 256
 repeat = 3
 
 lr_decay = 3
-lr_decay_factor = 0.9
+lr_decay_factor = 0.5
 lr_warmup = 1e-5
 lr_start = 1e-3
 lr_min = 1e-5
-lr_warmup_prop = 0.05
+lr_warmup_prop = 0.1
 
 
 lr_decay = get_lr_decay_closure(e, lr_decay, lr_decay_factor=lr_decay_factor,
@@ -49,7 +49,7 @@ lr_decay = get_lr_decay_closure(e, lr_decay, lr_decay_factor=lr_decay_factor,
 
 aug_choices = [
     apply_random_left_right_flip,
-    apply_random_up_down_flip,
+    # apply_random_up_down_flip,
     apply_random_contrast,
     apply_random_skew,
     apply_random_zoom,
@@ -62,7 +62,7 @@ aug_choices = [
     # apply_random_cutout,
 ]
 
-models = [EfficientNetB0, SimpleModel, ConvModel]  # [SimpleModel, ConvModel]
+models = [SimpleModel, ConvModel, EfficientNetB0]
 
 from augpolicies.core.util.parse_args import get_dataset_from_args
 dataset = get_dataset_from_args()
@@ -72,10 +72,10 @@ for _ in range(repeat):
         for m in models:
             t1 = time.time()
             ap = NoAugmentationPolicy()
-            model = get_and_compile_model(m, lr=0.002, from_logits=m is not SimpleModel_Softmax)
+            model = get_and_compile_model(m)
             train, val, test = get_classificaiton_data(dataset=dataset)
             losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=ap,
-                                                                       early_stop=estop, batch_size=batch_size)#, lr_decay=lr_decay)
+                                                                       early_stop=estop, batch_size=batch_size, lr_decay=lr_decay)
             with open(file_name, 'a', newline='') as csvfile:
                 writer = csv.writer(csvfile, delimiter=',',
                                     quotechar='|', quoting=csv.QUOTE_MINIMAL)
@@ -113,11 +113,11 @@ for _ in range(repeat):
                                          f"{accs[best_acc_idx]}", f"{val_accs[best_acc_idx]}",
                                          f"{time.time() - t1:.2f}"])
         else:
-            for mag_f in range(5):
+            for mag_f in range(6):
                 for prob_f in range(2):
                     for m in models:
                         aug_ = aug
-                        _mag = mag + (0.2 * mag_f)
+                        _mag = 0.0 + (0.2 * mag_f)
                         _prob = 0.5 + (0.5 * prob_f)
                         _prob = tf.constant(_prob)
                         _mag = tf.constant(_mag)
