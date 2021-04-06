@@ -48,60 +48,74 @@ def data_generator(x, y, batch_size=32, train=True):
 class ConvModel(tf.keras.Model):
     def __init__(self):
         super(ConvModel, self).__init__()
-        self.model_layers = [
+        self.m_ = tf.keras.models.Sequential([
             tf.keras.layers.Conv2D(64, (5, 5), activation='relu'),
             tf.keras.layers.Conv2D(32, (3, 3), activation='relu'),
+            tf.keras.layers.Dropout(0.2),
             tf.keras.layers.MaxPooling2D(pool_size=2),
             tf.keras.layers.Conv2D(32, (3, 3), activation='relu'),
-            tf.keras.layers.MaxPooling2D(pool_size=2),
             tf.keras.layers.Dropout(0.2),
+            tf.keras.layers.MaxPooling2D(pool_size=2),
             tf.keras.layers.Conv2D(32, (3, 3), activation='relu'),
-            tf.keras.layers.MaxPooling2D(pool_size=2),
             tf.keras.layers.Dropout(0.2),
+            tf.keras.layers.MaxPooling2D(pool_size=2),
             tf.keras.layers.Flatten(),
             tf.keras.layers.Dense(256, activation='relu'),
-            tf.keras.layers.Dropout(0.3),
-            tf.keras.layers.Dense(10)
-        ]
+            tf.keras.layers.Dropout(0.2),
+            tf.keras.layers.Dense(10, activation='softmax')
+        ])
 
     def call(self, inputs, training=False):
-        x = inputs
-        for lay in self.model_layers:
-            x = lay(x)
-        return x
+        return self.m_.call(inputs, training=training)
 
 
-class EfficientNetB0:
+class EfficientNetB0(tf.keras.Model):
     def __init__(self):
-        self.model = tf.keras.models.Sequential([
+        super(EfficientNetB0, self).__init__()
+        self.m_ = tf.keras.models.Sequential([
             tf.keras.applications.EfficientNetB0(include_top=False, weights=None, input_tensor=None,
                                                  input_shape=None, pooling='max', classes=1000,
                                                  classifier_activation='softmax'),
+            tf.keras.layers.Flatten(),
+            tf.keras.layers.Dense(128, activation='relu'),
+            tf.keras.layers.Dense(10),
         ])
-        
+
+    def call(self, inputs, training=False):
+        return self.m_.call(inputs, training=training)
 
 
 class SimpleModel(tf.keras.Model):
     def __init__(self):
         super(SimpleModel, self).__init__()
-        self.model_layers = [
+        self.m_ = tf.keras.models.Sequential([
             tf.keras.layers.Flatten(),
             tf.keras.layers.Dense(128, activation='relu'),
             tf.keras.layers.Dense(10)
-        ]
+        ])
 
     def call(self, inputs, training=False):
-        x = inputs
-        for lay in self.model_layers:
-            x = lay(x)
-        return x
+        return self.m_.call(inputs, training=training)
 
 
-def get_and_compile_model(model_func, lr=0.001):
+class SimpleModel_Softmax(tf.keras.Model):
+    def __init__(self):
+        super(SimpleModel_Softmax, self).__init__()
+        self.m_ = tf.keras.models.Sequential([
+            tf.keras.layers.Flatten(),
+            tf.keras.layers.Dense(128, activation='relu'),
+            tf.keras.layers.Dense(10, activation='softmax')
+        ])
+
+    def call(self, inputs, training=False):
+        return self.m_.call(inputs, training=training)
+
+
+def get_and_compile_model(model_func, lr=0.001, from_logits=True):
     model = model_func()
     model.compile(
         optimizer=tf.keras.optimizers.Adam(lr=lr),
-        loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+        loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=from_logits),
         metrics=['accuracy'],
     )
     return model

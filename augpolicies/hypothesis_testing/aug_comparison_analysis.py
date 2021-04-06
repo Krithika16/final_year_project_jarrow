@@ -1,10 +1,10 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+from augpolicies.core.util.parse_args import get_dataset_from_args
 
 df = pd.read_csv("data/results/aug_comparison.csv")
 
-from augpolicies.core.util.parse_args import get_dataset_from_args
 dataset = get_dataset_from_args()
 try:
     df = df[df['dataset' == dataset.__name__]]
@@ -17,35 +17,46 @@ pt = pd.pivot_table(df, values=['val_acc'], index=['aug', 'model', 'mag'])
 pt_var = pd.pivot_table(df, values=['val_acc'], index=['aug', 'model', 'mag'], aggfunc=np.std)
 
 
-excl_args = []
+models = df.model.unique()
 
-f, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
+excl_augs = []
+
+f, ax = plt.subplots(1, len(models), sharey=True)
 
 
 cm = plt.get_cmap('gist_rainbow')
-NUM_COLORS = 13
+NUM_COLORS = len(df.aug.unique())
 
-for ax in [ax1, ax2]:
-    ax.set_prop_cycle('color', [cm(1. * i / NUM_COLORS) for i in range(NUM_COLORS)])
+for m_idx, m in enumerate(df.model.unique()):
 
-for m in df.model.unique():
+    if len(models) > 1:
+        ax_ = ax[m_idx]
+    else:
+        ax_ = ax
 
-    ax = ax1 if m == "SimpleModel" else ax2
+    ax_.set_prop_cycle('color', [cm(1. * i / NUM_COLORS) for i in range(NUM_COLORS)])
 
-    for i in df.aug.unique():
-        if i not in excl_args:
+    for aug in df.aug.unique():
+        if aug not in excl_augs:
             err = None
             try:
-                err = pt_var.loc[i, m].val_acc
-                if len(err) != len(pt.loc[i, m]['val_acc']):
+                err = pt_var.loc[aug, m].val_acc
+                if len(err) != len(pt.loc[aug, m]['val_acc']):
                     raise KeyError
-                ax.errorbar(x=pt.loc[i, m].index, y=pt.loc[i, m]['val_acc'], yerr=err, label=f'{i}', marker='o')
+                ax_.errorbar(x=pt.loc[aug, m].index, y=pt.loc[aug, m]['val_acc'], yerr=err, label=f'{aug}', marker='o')
             except KeyError:
-                ax.plot(pt.loc[i, m].index, pt.loc[i, m]['val_acc'], label=f'{i}', marker='o')
+                try:
+                    ax_.plot(pt.loc[aug, m].index, pt.loc[aug, m]['val_acc'], label=f'{aug}', marker='o')
+                except KeyError:
+                    pass
 
 
-ax1.title.set_text('Simple Model')
-ax2.title.set_text('Conv Model')
+for m_idx, m in enumerate(df.model.unique()):
+    if len(models) > 1:
+        ax_ = ax[m_idx]
+    else:
+        ax_ = ax
+    ax_.title.set_text(m)
 
 plt.tight_layout()
 plt.legend()

@@ -52,8 +52,24 @@ def epoch(train_ds, val_ds, model, augmentation_policy, epoch_number, train_step
     return e_loss_avg.result(), e_val_loss_avg, e_acc.result(), e_val_acc
 
 
-def supervised_train_loop(model, train, val, data_generator, augmentation_policy=None,
-                          batch_size=128, epochs=20, debug=True, early_stop=None,
+def get_lr_decay_closure(total_epochs: int, e_decay: int, *,
+                         lr_decay_factor: float, lr_start: float, lr_min: float,
+                         lr_warmup: float, warmup_proportion: float):
+    # total_epochs: expected total training length
+    # e_decay: number of epochs till decay
+    # lr decay factor
+    # lr at start after the warm up
+    # min lr
+    # lr during warmup, lr_warmup -> lr_start
+    def lr_func():
+
+        pass
+    return lr_func
+
+
+def supervised_train_loop(model, train, val, data_generator, *, augmentation_policy=None,
+                          batch_size=128, epochs=20, debug=True,
+                          early_stop=None, lr_decay=None,
                           loss=None, optimizer=None):
     train_loss_results = []
     train_val_loss_results = []
@@ -80,6 +96,8 @@ def supervised_train_loop(model, train, val, data_generator, augmentation_policy
         if debug:
             print(f"{e+1:03d}/{epochs:03d}: Loss: {train_loss_results[-1]:.3f}, Val Loss: {train_val_loss_results[-1]:.3f}, Acc: {train_acc_results[-1]:.3f}, Val Acc: {train_val_acc_results[-1]:.3f}, Time so far: {time.time() - t0:.1f}")
             pass
+        if lr_decay:
+            optimizer.lr = lr_decay(e, optimizer.lr)
         if early_stop:
             if e_val_loss_avg < best_loss:
                 best_loss = e_val_loss_avg
@@ -89,6 +107,6 @@ def supervised_train_loop(model, train, val, data_generator, augmentation_policy
                     print("Early stopping at:", e + 1)
                     break
     if debug:
-        loss, acc = eval_loop(train_ds, model, loss=loss)
-        tf.print(f"No Aug Loss: {loss:.3f}, No Aug Acc: {acc:.3f}, Duration: {time.time() - t0:.1f}, E: {e + 1}")
+        eval_loss, eval_acc = eval_loop(train_ds, model, loss=loss)
+        tf.print(f"No Aug Loss: {eval_loss:.3f}, No Aug Acc: {eval_acc:.3f}, Duration: {time.time() - t0:.1f}, E: {e + 1}")
     return train_loss_results, train_val_loss_results, train_acc_results, train_val_acc_results
