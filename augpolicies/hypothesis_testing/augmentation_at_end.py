@@ -54,9 +54,9 @@ policies = [{'interval': True}, {'start': True}, {'start': False}]
 prob = 1.0
 mag = 0.1
 
-for aug in aug_choices:
-    for m in models:
-        for _ in range(3):  # repeats
+for _ in range(3):  # repeats
+    for aug in aug_choices:
+        for m in models:
             for n, p_kwargs in zip(names, policies):
                 for e_aug in e_augs:
                     print(f"{aug.__name__} - {m.__name__} - {n} - {e_aug}")
