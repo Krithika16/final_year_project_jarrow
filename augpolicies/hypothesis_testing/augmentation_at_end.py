@@ -21,7 +21,7 @@ dataset = get_dataset_from_args()
 
 file_name = "data/results/aug_at_end_data.csv"
 
-e = 40
+e = 25
 e_augs = list(range(0, e + 1, 10))
 batch_size = 256
 

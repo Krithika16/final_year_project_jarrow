@@ -5,7 +5,7 @@ import time
 import numpy as np
 import tensorflow as tf
 from augpolicies.augmentation_funcs.augmentation_2d import (
-    apply_random_brightness, apply_random_contrast, apply_random_cutout,
+    apply_no_aug, apply_random_brightness, apply_random_contrast, apply_random_cutout,
     apply_random_left_right_flip, apply_random_rotate, apply_random_skew,
     apply_random_up_down_flip, apply_random_x_skew, apply_random_x_zoom,
     apply_random_y_skew, apply_random_y_zoom, apply_random_zoom,
@@ -31,14 +31,14 @@ except FileExistsError:
     pass
 
 e = 40
-estop = 9
+estop = 10
 batch_size = 256
-repeat = 3
+repeat = 6
 
-lr_decay = 3
+lr_decay = 4
 lr_decay_factor = 0.5
 lr_warmup = 1e-5
-lr_start = 1e-3
+lr_start = 3e-3
 lr_min = 1e-5
 lr_warmup_prop = 0.1
 
@@ -48,6 +48,7 @@ lr_decay = get_lr_decay_closure(e, lr_decay, lr_decay_factor=lr_decay_factor,
                                 lr_warmup=lr_warmup, warmup_proportion=lr_warmup_prop)
 
 aug_choices = [
+    # apply_no_aug,
     apply_random_left_right_flip,
     # apply_random_up_down_flip,
     apply_random_contrast,
@@ -62,13 +63,13 @@ aug_choices = [
     # apply_random_cutout,
 ]
 
-models = [SimpleModel, ConvModel, EfficientNetB0]
+models = [SimpleModel, EfficientNetB0]
 
 from augpolicies.core.util.parse_args import get_dataset_from_args
 dataset = get_dataset_from_args()
 
 for _ in range(repeat):
-    for i in range(2):
+    for i in range(4):
         for m in models:
             t1 = time.time()
             ap = NoAugmentationPolicy()
@@ -90,7 +91,7 @@ for _ in range(repeat):
         prob = 0.0
         mag = 0.0
 
-        if aug is apply_random_left_right_flip or aug is apply_random_up_down_flip:
+        if (aug is apply_random_left_right_flip) or (aug is apply_random_up_down_flip) or (aug is apply_no_aug):
             for prob_f in range(4):
                 for m in models:
                     _prob = 0.25 * (prob_f + 1)
@@ -100,10 +101,10 @@ for _ in range(repeat):
                     t1 = time.time()
                     func = [kwargs_func_prob(_prob)]
                     ap = AugmentationPolicy([aug], func, num_to_apply=1)
-                    model = get_and_compile_model(m, lr=0.002)
+                    model = get_and_compile_model(m)
                     train, val, test = get_classificaiton_data(dataset=dataset)
                     losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=ap,
-                                                                               early_stop=estop, batch_size=batch_size)#, lr_decay=lr_decay)
+                                                                               early_stop=estop, batch_size=batch_size, lr_decay=lr_decay)
                     with open(file_name, 'a', newline='') as csvfile:
                         writer = csv.writer(csvfile, delimiter=',',
                                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
@@ -113,21 +114,21 @@ for _ in range(repeat):
                                          f"{accs[best_acc_idx]}", f"{val_accs[best_acc_idx]}",
                                          f"{time.time() - t1:.2f}"])
         else:
-            for mag_f in range(6):
+            for mag_f in range(5):
                 for prob_f in range(2):
                     for m in models:
                         aug_ = aug
-                        _mag = 0.0 + (0.2 * mag_f)
+                        _mag = 0.0 + (0.25 * mag_f)
                         _prob = 0.5 + (0.5 * prob_f)
                         _prob = tf.constant(_prob)
                         _mag = tf.constant(_mag)
                         t1 = time.time()
                         func = [kwargs_func_prob_mag(do_prob_mean=_prob, mag_mean=_mag)]
                         ap = AugmentationPolicy([aug_], func, num_to_apply=1)
-                        model = get_and_compile_model(m, lr=0.002)
+                        model = get_and_compile_model(m)
                         train, val, test = get_classificaiton_data(dataset=dataset)
                         losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=ap,
-                                                                                   early_stop=estop, batch_size=batch_size)#, lr_decay=lr_decay)
+                                                                                   early_stop=estop, batch_size=batch_size, lr_decay=lr_decay)
                         with open(file_name, 'a', newline='') as csvfile:
                             writer = csv.writer(csvfile, delimiter=',',
                                                 quotechar='|', quoting=csv.QUOTE_MINIMAL)

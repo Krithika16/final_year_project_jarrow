@@ -61,9 +61,9 @@ def get_lr_decay_closure(total_epochs: int, e_decay: int, *,
 
     def lr_func(current_epoch, best_loss_at, learning_rate):
         updated_learning_rate = learning_rate
-        if current_epoch <= warmup_epoch_length - 1:
+        if (current_epoch <= warmup_epoch_length - 1) and (warmup_epoch_length > 0):
             # warmup here
-            warmup_left = (warmup_epoch_length - 1 - current_epoch) / (warmup_epoch_length - 1)
+            warmup_left = (warmup_epoch_length - 1 - current_epoch) / (warmup_epoch_length)
             updated_learning_rate = lr_warmup * (warmup_left) + lr_start * (1 - warmup_left)
         else:
             # main loop with lr decay

@@ -59,6 +59,19 @@ def enforce_rank(image):
     assert len(image.shape) == 4, f"NHWC format required, observed rank: {len(image.shape)} for shape: {image.shape}"
 
 
+# no aug
+
+
+def apply_no_aug(
+    image: tfa.types.TensorLike,
+    label: tfa.types.TensorLike,
+    *args,
+    **kwargs,
+) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
+
+    return image, label
+
+
 # only prob as an kwarg input
 
 
@@ -128,8 +141,9 @@ def apply_random_hue(
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
     enforce_rank(image)
-    if tf.random.uniform([]) <= do_prob:
-        image = tf.image.random_hue(image, mag)
+    if mag > 0:
+        if tf.random.uniform([]) <= do_prob:
+            image = tf.image.random_hue(image, mag)
     return image, label
 
 
@@ -141,9 +155,10 @@ def apply_random_contrast(
 ) -> Tuple[tfa.types.TensorLike, tfa.types.TensorLike]:
 
     enforce_rank(image)
-    if tf.random.uniform(()) <= do_prob:
-        lower = 0. if mag > 1. else 1. - mag
-        image = tf.image.random_contrast(image, lower, 1. + mag + 0.001)
+    if mag > 0:
+        if tf.random.uniform(()) <= do_prob:
+            lower = 0. if mag > 1. else 1. - mag
+            image = tf.image.random_contrast(image, lower, 1. + mag + 0.001)
     return image, label
 
 
@@ -246,12 +261,11 @@ def apply_random_zoom(
 
     enforce_rank(image)
     mag = (1 - (tf.random.uniform((image.shape[0], 2)) - 0.5) * mag)
+    ones_mask = tf.ones(mag.shape)
 
-    samples = tf.random.categorical(tf.math.log([[1 - do_prob, do_prob]]), mag.shape[0] * mag.shape[1])
-    samples_mask = tf.reshape(samples, mag.shape)
-    samples_mask = tf.cast(samples_mask, tf.float32)
-
-    mag = tf.math.multiply(mag, samples_mask).numpy()
+    samples_mask = tf.random.categorical(tf.math.log([[1 - do_prob, do_prob]]), mag.shape[0] * mag.shape[1])
+    samples_mask = tf.reshape(samples_mask, mag.shape)
+    mag = tf.where(samples_mask == 1, mag, ones_mask).numpy()
 
     if not x_mag:
         mag[:, 0] = 1.0
