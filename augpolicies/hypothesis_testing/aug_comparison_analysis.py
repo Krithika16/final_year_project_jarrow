@@ -11,7 +11,7 @@ try:
 except KeyError:
     pass
 
-plot_prob = True
+plot_prob = False
 if plot_prob:
     pt_idx = ['aug', 'model', 'prob', 'mag']
 else:
@@ -30,8 +30,22 @@ excl_augs = []
 
 f, ax = plt.subplots(1, len(models), sharey=True)
 
-cm = plt.get_cmap('gist_rainbow')
-NUM_COLORS = len(df.aug.unique())
+cm = plt.get_cmap('nipy_spectral')
+if plot_prob:
+    NUM_COLORS = 0
+    ms = [0] * len(models)
+    for m_idx, m in enumerate(models):
+        for aug in df.aug.unique():
+            for prob in df.prob.unique():
+                try:
+                    x = pt.loc[aug, m, prob].index
+                    print(aug, m, prob)
+                    ms[m_idx] += 1
+                except KeyError:
+                    pass
+    NUM_COLORS = max(ms)
+else:
+    NUM_COLORS = len(df.aug.unique())
 
 for m_idx, m in enumerate(df.model.unique()):
 

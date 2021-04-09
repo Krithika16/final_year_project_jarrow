@@ -19,16 +19,16 @@ import csv
 from augpolicies.core.util.parse_args import get_dataset_from_args
 dataset = get_dataset_from_args()
 
-file_name = "data/results/aug_at_end_data.csv"
+file_name = "data/results/aug_at_end_data_skew_20.csv"
 
-e = 25
-e_augs = list(range(0, e + 1, 10))
+e = 24
+e_augs = list(range(0, e + 1, 6))
 batch_size = 256
 
-lr_decay = 3
+lr_decay = 4
 lr_decay_factor = 0.5
 lr_warmup = 1e-5
-lr_start = 1e-3
+lr_start = 3e-3
 lr_min = 1e-5
 lr_warmup_prop = 0.1
 
@@ -38,21 +38,21 @@ lr_decay = get_lr_decay_closure(e, lr_decay, lr_decay_factor=lr_decay_factor,
                                 lr_warmup=lr_warmup, warmup_proportion=lr_warmup_prop)
 
 aug_choices = [
-    apply_random_left_right_flip,
-    apply_random_up_down_flip,
-    apply_random_contrast,
+    # apply_random_left_right_flip,
+    # apply_random_up_down_flip,
+    # apply_random_contrast,
     apply_random_skew,
-    apply_random_zoom,
+    # apply_random_zoom,
     # apply_random_x_skew,
     # apply_random_y_skew,
     # apply_random_x_zoom,
     # apply_random_y_zoom,
-    apply_random_brightness,
-    apply_random_rotate,
+    # apply_random_brightness,
+    # apply_random_rotate,
     # apply_random_cutout,
 ]
 
-models = [SimpleModel, ConvModel, EfficientNetB0]
+models = [SimpleModel]  # SimpleModel, ConvModel, EfficientNetB0
 
 try:
     with open(file_name, 'x', newline='') as csvfile:
@@ -66,7 +66,7 @@ names = ['interval', 'start', 'end']
 policies = [{'interval': True}, {'start': True}, {'start': False}]
 
 prob = 1.0
-mag = 0.1
+mag = 0.2
 
 for _ in range(3):  # repeats
     for aug in aug_choices:

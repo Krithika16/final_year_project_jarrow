@@ -30,10 +30,10 @@ try:
 except FileExistsError:
     pass
 
-e = 40
+e = 20
 estop = 10
 batch_size = 256
-repeat = 6
+repeat = 3
 
 lr_decay = 4
 lr_decay_factor = 0.5

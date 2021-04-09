@@ -68,9 +68,10 @@ def get_lr_decay_closure(total_epochs: int, e_decay: int, *,
         else:
             # main loop with lr decay
             if current_epoch - best_loss_at >= e_decay:
-                temp_learning_rate = learning_rate * lr_decay_factor
-                if temp_learning_rate >= lr_min:
-                    updated_learning_rate = temp_learning_rate
+                if (current_epoch - best_loss_at) % e_decay == 0:
+                    temp_learning_rate = learning_rate * lr_decay_factor
+                    if temp_learning_rate >= lr_min:
+                        updated_learning_rate = temp_learning_rate
             else:
                 updated_learning_rate = learning_rate
         return updated_learning_rate
@@ -118,15 +119,15 @@ def supervised_train_loop(model, train, val, data_generator, *, augmentation_pol
         train_val_loss_results.append(e_val_loss_avg)
         train_acc_results.append(e_acc)
         train_val_acc_results.append(e_val_acc)
+
+        if e_val_loss_avg < best_loss:
+            best_loss = e_val_loss_avg
+            best_loss_at = e
         if debug:
             print(f"{e+1:03d}/{epochs:03d}: Loss: {train_loss_results[-1]:.3f},",
                   f"Val Loss: {train_val_loss_results[-1]:.3f}, Acc: {train_acc_results[-1]:.3f},",
-                  f"Val Acc: {train_val_acc_results[-1]:.3f}, Time so far: {time.time() - t0:.1f}")
-
+                  f"Val Acc: {train_val_acc_results[-1]:.3f}, Time so far: {time.time() - t0:.1f}, Lr: {optimizer.lr.numpy():.5f}, Since Best: {e - best_loss_at}")
         if early_stop:
-            if e_val_loss_avg < best_loss:
-                best_loss = e_val_loss_avg
-                best_loss_at = e
             if e - best_loss_at >= early_stop:
                 if debug:
                     print("Early stopping at:", e + 1)
