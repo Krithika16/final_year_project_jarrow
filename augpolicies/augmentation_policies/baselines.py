@@ -8,6 +8,7 @@ from typing import Tuple, List, Callable
 class NoAugmentationPolicy(tf.keras.Model):
     def __init__(self, *args, **kwargs):
         super(NoAugmentationPolicy, self).__init__()
+        self.config = "NA"
 
     def call(
         self,
@@ -36,6 +37,10 @@ class AugmentationPolicy(tf.keras.Model):
         self.num_to_apply = num_to_apply
         self.aug_choices = aug_choices
         self.aug_kwargs_funcs_list = aug_kwargs_funcs_list
+        self.config = {
+            'num_to_apply': num_to_apply,
+            'aug_choices': [i.__name__ for i in aug_choices],
+        }
 
     def call(
         self,
@@ -93,6 +98,13 @@ class HalfAugmentationPolicy(tf.keras.Model):
             self.idxes = self.get_interval_idxes(e_total, aug_applications)
             self.apply_aug_func = self.split_interval
         self.aug_choices = aug_choices
+        self.config = {
+            'start': start,
+            'interval': interval,
+            'num_to_apply': num_to_apply,
+            'aug_choices': [i.__name__ for i in aug_choices],
+            'aug_applications': aug_applications,
+        }
 
     def call(
         self,

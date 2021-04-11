@@ -2,6 +2,7 @@ from augpolicies.core.util.reshape import make_3d, pad_to_min_size
 import time
 import tensorflow as tf
 import numpy as np
+from datetime import datetime
 
 
 def get_train_step_fn():
@@ -47,41 +48,84 @@ def epoch(train_ds, val_ds, model, augmentation_policy, epoch_number, train_step
     return e_loss_avg.result(), e_val_loss_avg, e_acc.result(), e_val_acc
 
 
-def get_lr_decay_closure(total_epochs: int, e_decay: int, *,
-                         lr_decay_factor: float, lr_start: float, lr_min: float,
-                         lr_warmup: float, warmup_proportion: float):
-    # total_epochs: expected total training length
-    # e_decay: number of epochs till decay
-    # lr decay factor
-    # lr at start after the warm up
-    # min lr
-    # lr during warmup, lr_warmup -> lr_start
+# def get_lr_decay_closure(total_epochs: int, e_decay: int, *,
+#                          lr_decay_factor: float, lr_start: float, lr_min: float,
+#                          lr_warmup: float, warmup_proportion: float):
+#     # total_epochs: expected total training length
+#     # e_decay: number of epochs till decay
+#     # lr decay factor
+#     # lr at start after the warm up
+#     # min lr
+#     # lr during warmup, lr_warmup -> lr_start
 
-    warmup_epoch_length = int(total_epochs * warmup_proportion)
+#     warmup_epoch_length = int(total_epochs * warmup_proportion)
 
-    def lr_func(current_epoch, best_loss_at, learning_rate):
+#     def lr_func(current_epoch, best_loss_at, learning_rate):
+#         updated_learning_rate = learning_rate
+#         if (current_epoch <= warmup_epoch_length - 1) and (warmup_epoch_length > 0):
+#             # warmup here
+#             warmup_left = (warmup_epoch_length - 1 - current_epoch) / (warmup_epoch_length)
+#             updated_learning_rate = lr_warmup * (warmup_left) + lr_start * (1 - warmup_left)
+#         else:
+#             # main loop with lr decay
+#             if current_epoch - best_loss_at >= e_decay:
+#                 if (current_epoch - best_loss_at) % e_decay == 0:
+#                     temp_learning_rate = learning_rate * lr_decay_factor
+#                     if temp_learning_rate >= lr_min:
+#                         updated_learning_rate = temp_learning_rate
+#             else:
+#                 updated_learning_rate = learning_rate
+#         return updated_learning_rate
+#     return lr_func
+
+class get_lr_decay_closure:
+    def __init__(self, total_epochs: int, e_decay: int, *,
+                 lr_decay_factor: float, lr_start: float, lr_min: float,
+                 lr_warmup: float, warmup_proportion: float):
+        # total_epochs: expected total training length
+        # e_decay: number of epochs till decay
+        # lr decay factor
+        # lr at start after the warm up
+        # min lr
+        # lr during warmup, lr_warmup -> lr_start
+        self.total_epochs = total_epochs
+        self.e_decay = e_decay
+        self.lr_decay_factor = lr_decay_factor
+        self.lr_start = lr_start
+        self.lr_min = lr_min
+        self.lr_warmup = lr_warmup
+        self.warmup_proportion = warmup_proportion
+        self.warmup_epoch_length = int(total_epochs * warmup_proportion)
+        self.config = {
+            'total_epochs': total_epochs, 'e_decay': e_decay, 'lr_decay_factor': lr_decay_factor,
+            'lr_start': lr_start, 'lr_min': lr_min, 'lr_warmup': lr_warmup, 'warmup_proportion': warmup_proportion,
+            'warmup_epoch_length': self.warmup_epoch_length,
+        }
+
+    def __call__(self, current_epoch, best_loss_at, learning_rate):
         updated_learning_rate = learning_rate
-        if (current_epoch <= warmup_epoch_length - 1) and (warmup_epoch_length > 0):
+        if (current_epoch <= self.warmup_epoch_length - 1) and (self.warmup_epoch_length > 0):
             # warmup here
-            warmup_left = (warmup_epoch_length - 1 - current_epoch) / (warmup_epoch_length)
-            updated_learning_rate = lr_warmup * (warmup_left) + lr_start * (1 - warmup_left)
+            warmup_left = (self.warmup_epoch_length - 1 - current_epoch) / (self.warmup_epoch_length)
+            updated_learning_rate = self.lr_warmup * (warmup_left) + self.lr_start * (1 - warmup_left)
         else:
             # main loop with lr decay
-            if current_epoch - best_loss_at >= e_decay:
-                if (current_epoch - best_loss_at) % e_decay == 0:
-                    temp_learning_rate = learning_rate * lr_decay_factor
-                    if temp_learning_rate >= lr_min:
+            if current_epoch - best_loss_at >= self.e_decay:
+                if (current_epoch - best_loss_at) % self.e_decay == 0:
+                    temp_learning_rate = learning_rate * self.lr_decay_factor
+                    if temp_learning_rate >= self.lr_min:
                         updated_learning_rate = temp_learning_rate
             else:
                 updated_learning_rate = learning_rate
         return updated_learning_rate
-    return lr_func
 
 
-def supervised_train_loop(model, train, val, data_generator, *, augmentation_policy=None,
+def supervised_train_loop(model, train, val, data_generator, id_tag, *, augmentation_policy=None,
                           batch_size=128, epochs=20, debug=True,
                           early_stop=None, lr_decay=None,
                           loss=None, optimizer=None):
+
+    history = {}
     train_loss_results = []
     train_val_loss_results = []
     train_acc_results = []
@@ -115,10 +159,10 @@ def supervised_train_loop(model, train, val, data_generator, *, augmentation_pol
 
         e_loss_avg, e_val_loss_avg, e_acc, e_val_acc = epoch(train_ds, val_ds, model, augmentation_policy, e, train_step_fn, loss=loss, optimizer=optimizer)
 
-        train_loss_results.append(e_loss_avg)
-        train_val_loss_results.append(e_val_loss_avg)
-        train_acc_results.append(e_acc)
-        train_val_acc_results.append(e_val_acc)
+        train_loss_results.append(e_loss_avg.numpy().tolist())
+        train_val_loss_results.append(e_val_loss_avg.numpy().tolist())
+        train_acc_results.append(e_acc.numpy().tolist())
+        train_val_acc_results.append(e_val_acc.numpy().tolist())
 
         if e_val_loss_avg < best_loss:
             best_loss = e_val_loss_avg
@@ -135,4 +179,25 @@ def supervised_train_loop(model, train, val, data_generator, *, augmentation_pol
     if debug:
         eval_loss, eval_acc = eval_loop(train_ds, model, loss=loss)
         tf.print(f"No Aug Loss: {eval_loss:.3f}, No Aug Acc: {eval_acc:.3f}, Duration: {time.time() - t0:.1f}, E: {e + 1}")
-    return train_loss_results, train_val_loss_results, train_acc_results, train_val_acc_results
+
+    history['train_losses'] = train_loss_results
+    history['val_losses'] = train_val_loss_results
+    history['train_acc'] = train_acc_results
+    history['val_acc'] = train_val_acc_results
+    history['best_val_loss'] = {'loss': best_loss.numpy().item(),
+                                'epoch': best_loss_at}
+    history['train_eval_loss'] = eval_loss.numpy().item()
+    history['train_eval_acc'] = eval_acc.numpy().item()
+    history['target_epochs'] = epochs
+    history['epochs_ran'] = e
+    history['train_time'] = time.time() - t0
+    history['file_name'] = f"{id_tag}_{datetime.now().strftime('%m-%d-%Y_%H-%M-%S')}"
+
+    history['loss'] = loss.name
+    history['optimizer'] = str(optimizer)
+    history['early_stop'] = early_stop if early_stop else "NA"
+    history['batch_size'] = batch_size
+    history['lr_decay'] = lr_decay.config if lr_decay else "NA"
+    history['aug_policy'] = augmentation_policy.config if augmentation_policy else "NA"
+
+    return history

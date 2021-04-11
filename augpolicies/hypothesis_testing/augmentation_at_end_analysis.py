@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 
 
-df = pd.read_csv("data/results/aug_at_end_data_skew_20.csv")
+df = pd.read_csv("data/results/aug_at_end_data_skew_12.csv")
 
 from augpolicies.core.util.parse_args import get_dataset_from_args
 dataset = get_dataset_from_args()

@@ -1,7 +1,8 @@
-import csv
-import random
 import time
-
+import random
+import csv
+import json
+import os
 import numpy as np
 import tensorflow as tf
 from augpolicies.augmentation_funcs.augmentation_2d import (
@@ -20,17 +21,25 @@ from augpolicies.core.train.classification_supervised_loop import \
     supervised_train_loop, get_lr_decay_closure
 from augpolicies.core.util import set_memory_growth
 
-file_name = "data/results/aug_comparison.csv"
+results_path = "data/results/aug_comparison/"
+file_name = "aug_comparison"
+file_path = os.path.join(results_path, f"{file_name}.csv")
 
 try:
-    with open(file_name, 'x', newline='') as csvfile:
-        writer = csv.writer(csvfile, delimiter=',',
-                            quotechar='|', quoting=csv.QUOTE_MINIMAL)
-        writer.writerow(["dataset", "aug", "model", "e", "early_stop_e", "prob", "mag", "loss", "val_loss", "acc", "val_acc", "time"])
+    os.makedirs(results_path)
 except FileExistsError:
     pass
 
-e = 20
+try:
+    with open(file_path, 'x', newline='') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',',
+                            quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        writer.writerow(["dataset", "aug", "model", "e", "early_stop_e", "prob", "mag", "loss", "val_loss", "acc", "val_acc", "time", "results_tag"])
+except FileExistsError:
+    pass
+
+
+e = 3
 estop = 10
 batch_size = 256
 repeat = 3
@@ -75,16 +84,21 @@ for _ in range(repeat):
             ap = NoAugmentationPolicy()
             model = get_and_compile_model(m)
             train, val, test = get_classificaiton_data(dataset=dataset)
-            losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=ap,
-                                                                       early_stop=estop, batch_size=batch_size, lr_decay=lr_decay)
-            with open(file_name, 'a', newline='') as csvfile:
+            with open(file_path) as f:
+                num_lines = sum(1 for line in f)
+            id_tag = f"{file_name}_{num_lines + 1}"
+            h = supervised_train_loop(model, train, test, data_generator, id_tag=id_tag, epochs=e, augmentation_policy=ap,
+                                      early_stop=estop, batch_size=batch_size, lr_decay=lr_decay)
+            with open(file_path, 'a', newline='') as csvfile:
                 writer = csv.writer(csvfile, delimiter=',',
                                     quotechar='|', quoting=csv.QUOTE_MINIMAL)
-                best_acc_idx = np.argmax(val_accs)
-                writer.writerow([dataset.__name__.split(".")[-1], "No Aug", f"{m.__name__}", f"{e}", f"{best_acc_idx+1}", "-0.1", "-0.1",
-                                 f"{losses[best_acc_idx]}", f"{val_losses[best_acc_idx]}",
-                                 f"{accs[best_acc_idx]}", f"{val_accs[best_acc_idx]}",
-                                 f"{time.time() - t1:.2f}"])
+                best_idx = h['best_val_loss']['epoch']
+                writer.writerow([dataset.__name__.split(".")[-1], "No Aug", f"{m.__name__}", f"{e}", f"{best_idx+1}", "-0.1", "-0.1",
+                                 f"{h['train_losses'][best_idx]}", f"{h['val_losses'][best_idx]}",
+                                 f"{h['train_acc'][best_idx]}", f"{h['val_acc'][best_idx]}",
+                                 f"{time.time() - t1:.2f}", f"{h['file_name']}"])
+            with open(os.path.join(results_path, f"{h['file_name']}.json"), "w") as f:
+                json.dump(h, f)
 
     for idx, aug in enumerate(aug_choices):
         aug = aug_choices[idx]
@@ -103,16 +117,21 @@ for _ in range(repeat):
                     ap = AugmentationPolicy([aug], func, num_to_apply=1)
                     model = get_and_compile_model(m)
                     train, val, test = get_classificaiton_data(dataset=dataset)
-                    losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=ap,
-                                                                               early_stop=estop, batch_size=batch_size, lr_decay=lr_decay)
-                    with open(file_name, 'a', newline='') as csvfile:
+                    with open(file_path) as f:
+                        num_lines = sum(1 for line in f)
+                    id_tag = f"{file_name}_{num_lines + 1}"
+                    h = supervised_train_loop(model, train, test, data_generator, id_tag=id_tag, epochs=e, augmentation_policy=ap,
+                                              early_stop=estop, batch_size=batch_size, lr_decay=lr_decay)
+                    with open(file_path, 'a', newline='') as csvfile:
                         writer = csv.writer(csvfile, delimiter=',',
                                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
-                        best_acc_idx = np.argmax(val_accs)
-                        writer.writerow([dataset.__name__.split(".")[-1], aug.__name__, f"{m.__name__}", f"{e}", f"{best_acc_idx+1}", f"{_prob}", f"{_mag}",
-                                         f"{losses[best_acc_idx]}", f"{val_losses[best_acc_idx]}",
-                                         f"{accs[best_acc_idx]}", f"{val_accs[best_acc_idx]}",
-                                         f"{time.time() - t1:.2f}"])
+                        best_idx = h['best_val_loss']['epoch']
+                        writer.writerow([dataset.__name__.split(".")[-1], aug.__name__, f"{m.__name__}", f"{e}", f"{best_idx+1}", f"{_prob}", f"{_mag}",
+                                         f"{h['train_losses'][best_idx]}", f"{h['val_losses'][best_idx]}",
+                                         f"{h['train_acc'][best_idx]}", f"{h['val_acc'][best_idx]}",
+                                         f"{time.time() - t1:.2f}", f"{h['file_name']}"])
+                    with open(os.path.join(results_path, f"{h['file_name']}.json"), "w") as f:
+                        json.dump(h, f)
         else:
             for mag_f in range(5):
                 for prob_f in range(2):
@@ -127,13 +146,18 @@ for _ in range(repeat):
                         ap = AugmentationPolicy([aug_], func, num_to_apply=1)
                         model = get_and_compile_model(m)
                         train, val, test = get_classificaiton_data(dataset=dataset)
-                        losses, val_losses, accs, val_accs = supervised_train_loop(model, train, test, data_generator, epochs=e, augmentation_policy=ap,
-                                                                                   early_stop=estop, batch_size=batch_size, lr_decay=lr_decay)
-                        with open(file_name, 'a', newline='') as csvfile:
+                        with open(file_path) as f:
+                            num_lines = sum(1 for line in f)
+                        id_tag = f"{file_name}_{num_lines + 1}"
+                        h = supervised_train_loop(model, train, test, data_generator, id_tag=id_tag, epochs=e, augmentation_policy=ap,
+                                                  early_stop=estop, batch_size=batch_size, lr_decay=lr_decay)
+                        with open(file_path, 'a', newline='') as csvfile:
                             writer = csv.writer(csvfile, delimiter=',',
                                                 quotechar='|', quoting=csv.QUOTE_MINIMAL)
-                            best_acc_idx = np.argmax(val_accs)
-                            writer.writerow([dataset.__name__.split(".")[-1], aug.__name__, f"{m.__name__}", f"{e}", f"{best_acc_idx+1}", f"{_prob}", f"{_mag}",
-                                             f"{losses[best_acc_idx]}", f"{val_losses[best_acc_idx]}",
-                                             f"{accs[best_acc_idx]}", f"{val_accs[best_acc_idx]}",
-                                             f"{time.time() - t1:.2f}"])
+                            best_idx = h['best_val_loss']['epoch']
+                            writer.writerow([dataset.__name__.split(".")[-1], aug.__name__, f"{m.__name__}", f"{e}", f"{best_idx+1}", f"{_prob}", f"{_mag}",
+                                             f"{h['train_losses'][best_idx]}", f"{h['val_losses'][best_idx]}",
+                                             f"{h['train_acc'][best_idx]}", f"{h['val_acc'][best_idx]}",
+                                             f"{time.time() - t1:.2f}", f"{h['file_name']}"])
+                        with open(os.path.join(results_path, f"{h['file_name']}.json"), "w") as f:
+                            json.dump(h, f)
