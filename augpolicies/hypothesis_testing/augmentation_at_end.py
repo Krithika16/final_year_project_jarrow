@@ -22,7 +22,7 @@ from augpolicies.core.util.parse_args import get_dataset_from_args
 dataset = get_dataset_from_args()
 
 results_path = "data/results/aug_at_end/"
-file_name = "aug_at_end_data_skew_12"
+file_name = "aug_at_end_data"
 file_path = os.path.join(results_path, f"{file_name}.csv")
 
 try:
@@ -30,7 +30,7 @@ try:
 except FileExistsError:
     pass
 
-e = 4
+e = 6
 e_augs = list(range(0, e + 1, 2))
 batch_size = 256
 
@@ -61,7 +61,7 @@ aug_choices = [
     # apply_random_cutout,
 ]
 
-models = [EfficientNetB0]  # SimpleModel, ConvModel, EfficientNetB0
+models = [SimpleModel]  # SimpleModel, ConvModel, EfficientNetB0
 
 try:
     with open(file_path, 'x', newline='') as csvfile:

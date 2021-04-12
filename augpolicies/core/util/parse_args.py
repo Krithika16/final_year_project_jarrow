@@ -7,6 +7,7 @@ def get_args():
     parser.add_argument('--hpc', action='store_true', help='Hypothesis testing aug comparison')
     parser.add_argument('--hpe', action='store_true', help='Hypothesis testing aug at end')
     parser.add_argument('--vis', action='store_true', help='Hypothesis testing visualise result')
+    parser.add_argument('--rank', action='store_true', help='Ranks the full training sessions and gets the ranking through time')
     parser.add_argument('--data', default='fmnist', type=str, choices=['fmnist', 'cifar10'], help='Stores dataset.')
     args = parser.parse_args()
     return args

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from augpolicies.core.util.parse_args import get_dataset_from_args
 
-df = pd.read_csv("data/results/aug_comparison.csv")
+df = pd.read_csv("data/results/aug_comparison/aug_comparison.csv")
 
 dataset = get_dataset_from_args()
 try:
