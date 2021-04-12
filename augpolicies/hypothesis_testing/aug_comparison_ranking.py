@@ -6,7 +6,6 @@ import os
 from augpolicies.core.util.parse_args import get_dataset_from_args
 from scipy.stats import rankdata, pearsonr
 from sklearn.metrics import mean_squared_error
-import matplotlib.pyplot as plt
 
 
 file_path = "data/results/aug_comparison/"
@@ -19,7 +18,10 @@ try:
 except KeyError:
     pass
 
+# df = df.head(10)
+
 val_losses = []
+train_names = []
 
 for idx, row in df.iterrows():
     current_json = os.path.join(file_path, f"{row['results_tag']}.json")
@@ -27,8 +29,10 @@ for idx, row in df.iterrows():
         data = json.load(f)
     losses = data['val_losses']
     best_loss = data['best_val_loss']['loss']
+    name = f"{row['aug']}_{row['prob']}_{row['mag']}"
     losses.append(best_loss)
     val_losses.append(losses)
+    train_names.append(name)
 
 val_losses = np.array(val_losses)
 val_losses_ranked = np.zeros_like(val_losses)
@@ -135,6 +139,7 @@ plt.title("Analysis of Estimation of Rank")
 plt.ylabel("MSE")
 plt.xlabel("Epoch")
 plt.legend()
+plt.yscale("log")
 
 plt.figure()
 
@@ -151,5 +156,29 @@ plt.legend()
 plt.title("Analysis of Estimation of Top Ranked")
 plt.ylabel("MSE")
 plt.xlabel("Epoch")
+plt.yscale("log")
 
+plt.figure()
+
+cm = plt.get_cmap('gist_rainbow')
+NUM_COLORS = 8
+plt.gca().set_prop_cycle('color', [cm(1. * i / NUM_COLORS) for i in range(NUM_COLORS)])
+
+sorted_idxes = np.argsort(val_losses[:, -1])
+train_names = np.array(train_names)
+
+for idx, (data, label) in enumerate(zip(val_losses[sorted_idxes], train_names[sorted_idxes])):
+    c = None
+    if idx < 5:
+        alpha = 1.
+    elif idx < NUM_COLORS:
+        alpha = 0.8
+    else:
+        alpha = 0.1
+        c = "blue"
+    plt.plot(data, label=label, alpha=alpha, color=c)
+
+plt.legend(train_names[sorted_idxes][:NUM_COLORS])
+plt.title("All Runs")
+plt.yscale("log")
 plt.show()
