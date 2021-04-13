@@ -34,8 +34,14 @@ for idx, row in df.iterrows():
     val_losses.append(losses)
     train_names.append(name)
 
+print(val_losses)
+
+# pad with nans
+
 val_losses = np.array(val_losses)
 val_losses_ranked = np.zeros_like(val_losses)
+
+print(val_losses.shape)
 
 for col_num in range(val_losses.shape[1]):
     ranked = rankdata(val_losses[:, col_num], method='min')

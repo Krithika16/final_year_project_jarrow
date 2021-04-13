@@ -39,7 +39,7 @@ except FileExistsError:
     pass
 
 
-e = 15
+e = 40
 estop = 10
 batch_size = 256
 repeat = 3
@@ -61,11 +61,11 @@ aug_choices = [
     apply_random_left_right_flip,
     # apply_random_up_down_flip,
     apply_random_contrast,
-    # apply_random_skew,
+    apply_random_skew,
     apply_random_zoom,
     # apply_random_x_skew,
-    apply_random_y_skew,
-    apply_random_x_zoom,
+    # apply_random_y_skew,
+    # apply_random_x_zoom,
     # apply_random_y_zoom,
     # apply_random_brightness,
     apply_random_rotate,
