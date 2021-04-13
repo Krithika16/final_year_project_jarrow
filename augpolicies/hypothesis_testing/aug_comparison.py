@@ -39,7 +39,7 @@ except FileExistsError:
     pass
 
 
-e = 40
+e = 60
 estop = 10
 batch_size = 256
 repeat = 3
@@ -55,7 +55,7 @@ lr_warmup_prop = 0.1
 lr_decay = get_lr_decay_closure(e, lr_decay, lr_decay_factor=lr_decay_factor,
                                 lr_start=lr_start, lr_min=lr_min,
                                 lr_warmup=lr_warmup, warmup_proportion=lr_warmup_prop)
-
+# lr_decay = None
 aug_choices = [
     # apply_no_aug,
     apply_random_left_right_flip,

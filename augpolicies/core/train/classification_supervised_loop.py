@@ -103,7 +103,7 @@ class get_lr_decay_closure:
         }
 
     def __call__(self, current_epoch, best_loss_at, learning_rate):
-        updated_learning_rate = learning_rate
+        updated_learning_rate = learning_rate.numpy()
         if (current_epoch <= self.warmup_epoch_length - 1) and (self.warmup_epoch_length > 0):
             # warmup here
             warmup_left = (self.warmup_epoch_length - 1 - current_epoch) / (self.warmup_epoch_length)
@@ -112,11 +112,9 @@ class get_lr_decay_closure:
             # main loop with lr decay
             if current_epoch - best_loss_at >= self.e_decay:
                 if (current_epoch - best_loss_at) % self.e_decay == 0:
-                    temp_learning_rate = learning_rate * self.lr_decay_factor
+                    temp_learning_rate = updated_learning_rate * self.lr_decay_factor
                     if temp_learning_rate >= self.lr_min:
                         updated_learning_rate = temp_learning_rate
-            else:
-                updated_learning_rate = learning_rate
         return updated_learning_rate
 
 
@@ -155,7 +153,8 @@ def supervised_train_loop(model, train, val, data_generator, id_tag, *, augmenta
     for e in range(epochs):
 
         if lr_decay:
-            optimizer.lr = lr_decay(e, best_loss_at, optimizer.lr)
+            lr = lr_decay(e, best_loss_at, optimizer.learning_rate)
+            optimizer.learning_rate = lr
 
         e_loss_avg, e_val_loss_avg, e_acc, e_val_acc = epoch(train_ds, val_ds, model, augmentation_policy, e, train_step_fn, loss=loss, optimizer=optimizer)
 
