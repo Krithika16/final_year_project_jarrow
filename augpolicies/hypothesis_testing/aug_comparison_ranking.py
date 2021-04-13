@@ -18,6 +18,10 @@ try:
 except KeyError:
     pass
 
+e_total = 40
+
+df = df[df['e'] == e_total]
+
 # df = df.head(10)
 
 val_losses = []
@@ -27,21 +31,20 @@ for idx, row in df.iterrows():
     current_json = os.path.join(file_path, f"{row['results_tag']}.json")
     with open(current_json, "r") as f:
         data = json.load(f)
+    losses_mask = [np.nan] * e_total
     losses = data['val_losses']
+    losses_mask[:len(losses)] = losses
+    losses = losses_mask
     best_loss = data['best_val_loss']['loss']
     name = f"{row['aug']}_{row['prob']}_{row['mag']}"
     losses.append(best_loss)
     val_losses.append(losses)
     train_names.append(name)
 
-print(val_losses)
-
 # pad with nans
 
 val_losses = np.array(val_losses)
 val_losses_ranked = np.zeros_like(val_losses)
-
-print(val_losses.shape)
 
 for col_num in range(val_losses.shape[1]):
     ranked = rankdata(val_losses[:, col_num], method='min')
@@ -164,27 +167,44 @@ plt.ylabel("MSE")
 plt.xlabel("Epoch")
 plt.yscale("log")
 
-plt.figure()
+fig, axes = plt.subplots(5, 1)
 
-cm = plt.get_cmap('gist_rainbow')
 NUM_COLORS = 8
-plt.gca().set_prop_cycle('color', [cm(1. * i / NUM_COLORS) for i in range(NUM_COLORS)])
 
-sorted_idxes = np.argsort(val_losses[:, -1])
-train_names = np.array(train_names)
+for ax_idx, ax in enumerate(axes):
+    percent_of_data = (ax_idx+1)/len(axes)
+    runs = val_losses[:, :-1]
+    slice_e = int(runs.shape[1] * percent_of_data)
+    runs = runs[:, :slice_e]
 
-for idx, (data, label) in enumerate(zip(val_losses[sorted_idxes], train_names[sorted_idxes])):
-    c = None
-    if idx < 5:
-        alpha = 1.
-    elif idx < NUM_COLORS:
-        alpha = 0.8
-    else:
-        alpha = 0.1
-        c = "blue"
-    plt.plot(data, label=label, alpha=alpha, color=c)
+    best_losses_of_quarter = np.nanmin(runs, axis=-1)
 
-plt.legend(train_names[sorted_idxes][:NUM_COLORS])
-plt.title("All Runs")
-plt.yscale("log")
+    cm = plt.get_cmap('gist_rainbow')
+    ax.set_prop_cycle('color', [cm(1. * i / NUM_COLORS) for i in range(NUM_COLORS)])
+
+    if ax_idx == (len(axes) - 1):
+        assert np.array_equal(val_losses[:, -1], best_losses_of_quarter)
+
+    sorted_idxes = np.argsort(best_losses_of_quarter)
+    train_names = np.array(train_names)
+
+    for idx, (data, label) in enumerate(zip(val_losses[sorted_idxes], train_names[sorted_idxes])):
+        c = None
+        if idx < 5:
+            alpha = 1.
+        elif idx < NUM_COLORS:
+            alpha = 0.8
+        else:
+            alpha = 0.05
+            c = "blue"
+        ax.plot(data, label=label, alpha=alpha, color=c)
+
+    ax.axvline(x=slice_e, color="red")
+
+    ax.legend(train_names[sorted_idxes][:NUM_COLORS])
+    ax.set_yscale('log')
+    ax.title.set_text(f"Top performing trials over the first {percent_of_data * 100:.0f}% of each trial")
+    ax.set_xlabel("MSE")
+    ax.set_ylabel("Epoch")
+
 plt.show()
