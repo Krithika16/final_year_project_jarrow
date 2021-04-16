@@ -1,11 +1,20 @@
 FROM tensorflow/tensorflow:latest-gpu
 
-ADD . /augpoliciesrepo
+WORKDIR /home/joe/github/final_year_project_jarrow/
 
-RUN cd augpoliciesrepo
-RUN python -m venv env
-RUN source env/bin/activate
-RUN python -m pip install -U pip
-RUN python -m pip install -r reqs.txt -y
+COPY requirements.txt requirements.txt
 
-LABEL maintainer="joearrowsmith98@gmail.com"
+# Install tensorflow and reqs
+RUN pip install -U pip
+RUN pip install -U tensorflow
+RUN pip install -U tensorflow-addons
+RUN pip install sklearn
+RUN pip install pandas
+RUN pip install pytest
+RUN pip install matplotlib
+RUN pip install flake8
+
+# Clean up
+RUN apt-get autoremove -y \
+    && apt-get clean -y \
+    && rm -rf /var/lib/apt/lists/*
