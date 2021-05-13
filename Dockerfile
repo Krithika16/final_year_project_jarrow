@@ -19,6 +19,7 @@ RUN apt-get update
 RUN apt-get install -y tmux
 RUN apt-get install -y nano
 RUN apt-get install -y sudo
+RUN apt-get install -y task-spooler
 
 # Clean up
 RUN apt-get autoremove -y \
