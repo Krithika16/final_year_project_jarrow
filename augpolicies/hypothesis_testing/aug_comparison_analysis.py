@@ -1,9 +1,12 @@
 import pandas as pd
+import os; os.environ['MPLCONFIGDIR'] = "/tmp"
 import matplotlib.pyplot as plt
 import numpy as np
 from augpolicies.core.util.parse_args import get_dataset_from_args
 
-df = pd.read_csv("data/results/aug_comparison/aug_comparison.csv")
+file_path = "data/results/aug_comparison/"
+
+df = pd.read_csv(os.path.join(file_path, "aug_comparison.csv"))
 
 dataset = get_dataset_from_args()
 try:
@@ -118,5 +121,5 @@ for m_idx, m in enumerate(df.model.unique()):
 plt.legend()
 plt.tight_layout()
 plt.subplots_adjust(right=0.95, wspace=0.08, left=0.05)
-plt.savefig("aug_comparison")
+plt.savefig(os.path.join(file_path, "aug_comparison"))
 plt.show()

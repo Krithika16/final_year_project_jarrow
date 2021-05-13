@@ -13,6 +13,12 @@ RUN pip install pandas
 RUN pip install pytest
 RUN pip install matplotlib
 RUN pip install flake8
+RUN pip install jupyterlab
+
+RUN apt-get update
+RUN apt-get install -y tmux
+RUN apt-get install -y nano
+RUN apt-get install -y sudo
 
 # Clean up
 RUN apt-get autoremove -y \

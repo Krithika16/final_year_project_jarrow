@@ -1,8 +1,9 @@
 import pandas as pd
+import os; os.environ['MPLCONFIGDIR'] = "/tmp"
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import json
-import os
 from augpolicies.core.util.parse_args import get_dataset_from_args
 from scipy.stats import rankdata, pearsonr
 from sklearn.metrics import mean_squared_error
@@ -149,6 +150,7 @@ plt.ylabel("MSE")
 plt.xlabel("Epoch")
 plt.legend()
 plt.yscale("log")
+plt.savefig(os.path.join(file_path, "aug_comparison_ranking"))
 
 plt.figure()
 
@@ -166,10 +168,11 @@ plt.title("Analysis of Estimation of Top Ranked")
 plt.ylabel("MSE")
 plt.xlabel("Epoch")
 plt.yscale("log")
+plt.savefig(os.path.join(file_path, "aug_comparison_top_ranking"))
 
 fig, axes = plt.subplots(5, 1)
 
-NUM_COLORS = 8
+NUM_COLORS = 5
 
 for ax_idx, ax in enumerate(axes):
     percent_of_data = (ax_idx+1)/len(axes)
@@ -207,4 +210,5 @@ for ax_idx, ax in enumerate(axes):
     ax.set_xlabel("MSE")
     ax.set_ylabel("Epoch")
 
+plt.savefig(os.path.join(file_path, "aug_comparison_time_ranking"))
 plt.show()

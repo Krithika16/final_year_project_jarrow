@@ -1,9 +1,11 @@
+import os; os.environ['MPLCONFIGDIR'] = "/tmp"
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
+file_path = "data/results/aug_at_end/"
 
-df = pd.read_csv("data/results/aug_at_end_data_skew_12.csv")
+df = pd.read_csv(os.path.join(file_path, "aug_at_end.csv"))
 
 from augpolicies.core.util.parse_args import get_dataset_from_args
 dataset = get_dataset_from_args()
@@ -56,5 +58,5 @@ for a_idx, a in enumerate(augs):
                 a_.legend()
 
 plt.tight_layout()
-plt.savefig("aug_at_end")
+plt.savefig(os.path.join(file_path, "aug_at_end"))
 plt.show()

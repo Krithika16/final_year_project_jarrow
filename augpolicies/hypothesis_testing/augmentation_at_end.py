@@ -22,7 +22,7 @@ from augpolicies.core.util.parse_args import get_dataset_from_args
 dataset = get_dataset_from_args()
 
 results_path = "data/results/aug_at_end/"
-file_name = "aug_at_end_data"
+file_name = "aug_at_end"
 file_path = os.path.join(results_path, f"{file_name}.csv")
 
 try:
