@@ -9,16 +9,13 @@ from augpolicies.augmentation_funcs.augmentation_2d import apply_random_brightne
     apply_random_contrast, apply_random_left_right_flip, apply_random_up_down_flip, apply_random_skew, apply_random_zoom, \
     apply_random_x_skew, apply_random_y_skew, apply_random_x_zoom, apply_random_y_zoom, apply_random_rotate, apply_random_cutout
 
-import numpy as np
-import tensorflow as tf
-
 import time
 import random
 import csv
 import json
 import os
 
-from augpolicies.core.util.parse_args import get_dataset_from_args
+from augpolicies.core.util.parse_args import get_dataset_from_args, get_config_json
 dataset = get_dataset_from_args()
 
 results_path = "data/results/aug_at_end/"
@@ -30,38 +27,14 @@ try:
 except FileExistsError:
     pass
 
-e = 6
-e_augs = list(range(0, e + 1, 2))
-batch_size = 256
+config = get_config_json()
 
-lr_decay = 4
-lr_decay_factor = 0.5
-lr_warmup = 1e-5
-lr_start = 3e-3
-lr_min = 1e-5
-lr_warmup_prop = 0.1
-
-
-lr_decay = get_lr_decay_closure(e, lr_decay, lr_decay_factor=lr_decay_factor,
-                                lr_start=lr_start, lr_min=lr_min,
-                                lr_warmup=lr_warmup, warmup_proportion=lr_warmup_prop)
-
-aug_choices = [
-    # apply_random_left_right_flip,
-    apply_random_up_down_flip,
-    # apply_random_contrast,
-    apply_random_skew,
-    # apply_random_zoom,
-    # apply_random_x_skew,
-    # apply_random_y_skew,
-    # apply_random_x_zoom,
-    # apply_random_y_zoom,
-    # apply_random_brightness,
-    # apply_random_rotate,
-    # apply_random_cutout,
-]
-
-models = [SimpleModel]  # SimpleModel, ConvModel, EfficientNetB0
+e_augs = list(range(0, config['epochs'] + 1, 2))
+lr_decay = get_lr_decay_closure(config['epochs'], config['lr']['decay'],
+                                lr_decay_factor=config['lr']['decay_factor'],
+                                lr_start=config['lr']['start'], lr_min=config['lr']['min'],
+                                lr_warmup=config['lr']['warmup'],
+                                warmup_proportion=config['lr']['warmup_prop'])
 
 try:
     with open(file_path, 'x', newline='') as csvfile:
@@ -74,13 +47,12 @@ except FileExistsError:
 names = ['interval', 'start', 'end']
 policies = [{'interval': True}, {'start': True}, {'start': False}]
 
-prob = 1.0
-mag = 0.2
-repeats = 10
+mag = config['aug']['mag']
+prob = config['aug']['prob']
 
-for _ in range(repeats):  # repeats
-    for aug in aug_choices:
-        for m in models:
+for _ in range(config['repeats']):  # repeats
+    for aug in config['aug']['choices']:
+        for m in config['models']:
             for n, p_kwargs in zip(names, policies):
                 for e_aug in e_augs:
                     print(f"{aug.__name__} - {m.__name__} - {n} - {e_aug}")
@@ -96,18 +68,21 @@ for _ in range(repeats):  # repeats
                     else:
                         func = [kwargs_func_prob_mag(do_prob_mean=prob, mag_mean=_mag)]
 
-                    p = HalfAugmentationPolicy([aug], func, e, e_aug, num_to_apply=1, **p_kwargs)
+                    p = HalfAugmentationPolicy([aug], func, config['epochs'], e_aug,
+                                               num_to_apply=config['aug']['num_to_apply'], **p_kwargs)
                     with open(file_path) as f:
                         num_lines = sum(1 for line in f)
                     id_tag = f"{file_name}_{num_lines + 1}"
-                    h = supervised_train_loop(model, train, test, data_generator, id_tag=id_tag, epochs=e, augmentation_policy=p, batch_size=batch_size, lr_decay=lr_decay)
+                    h = supervised_train_loop(model, train, test, data_generator, id_tag=id_tag,
+                                              epochs=config['epochs'], augmentation_policy=p,
+                                              batch_size=config['batch_size'], lr_decay=lr_decay)
                     print(f'Time: {time.time() - t1:.2f}s')
                     with open(file_path, 'a', newline='') as csvfile:
                         writer = csv.writer(csvfile, delimiter=',',
                                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
                         best_idx = h['best_val_loss']['epoch']
                         writer.writerow([dataset.__name__.split(".")[-1], n, aug.__name__, m.__name__, f"{prob}", f"{_mag}",
-                                         f"{e}", f"{e_aug}",
+                                         f"{config['epochs']}", f"{e_aug}",
                                          f"{h['train_losses'][best_idx]}", f"{h['val_losses'][best_idx]}",
                                          f"{h['train_acc'][best_idx]}", f"{h['val_acc'][best_idx]}",
                                          f"{time.time() - t1:.2f}", f"{h['file_name']}"])
