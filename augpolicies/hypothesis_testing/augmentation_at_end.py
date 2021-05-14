@@ -5,6 +5,7 @@ import json
 import os
 
 from augpolicies.core.util.system_hardware import set_tf_memory_growth_for_system
+from augpolicies.core.util.dict2json import serializable_objects_in_dict
 from augpolicies.core.train.classification_supervised_loop import supervised_train_loop, get_lr_decay_closure
 from augpolicies.augmentation_funcs.augmentation_2d import kwargs_func_prob, kwargs_func_prob_mag
 from augpolicies.augmentation_funcs.augmentation_2d import apply_random_left_right_flip, apply_random_up_down_flip
@@ -14,7 +15,7 @@ from augpolicies.core.util.parse_args import get_dataset_from_args, get_config_j
 
 set_tf_memory_growth_for_system()
 dataset = get_dataset_from_args()
-config, config_original = get_config_json()
+config = get_config_json()
 
 start_time = datetime.now().strftime('%m-%d-%Y_%H-%M-%S')
 task = os.path.splitext(os.path.basename(__file__))[0]
@@ -24,12 +25,20 @@ results_file = os.path.join(results_path, "summary_results.csv")
 
 try:
     os.makedirs(results_path)
+    os.makedirs(os.path.join(results_path, "episode"))
 except FileExistsError:
     pass
 
+import pprint
+pp = pprint.PrettyPrinter(indent=4)
+pp.pprint(config)
+
+serializable_config = serializable_objects_in_dict(config)
+
+pp.pprint(serializable_config)
+
 with open(os.path.join(results_path, "config.json"), "w") as f:
-    json.dump(config_original, f)
-del config_original
+    json.dump(serializable_config, f, indent=4)
 
 try:
     with open(results_file, 'x', newline='') as csvfile:
@@ -71,10 +80,11 @@ for _ in range(config['repeats']):  # repeats
                                                num_to_apply=config['aug']['num_to_apply'], **p_kwargs)
                     with open(results_file) as f:
                         num_lines = sum(1 for line in f)
-                    id_tag = f"{__name__}_{num_lines + 1}"
-                    h = supervised_train_loop(m, dataset, id_tag=id_tag, 
-                                              strategy=config['strategy'], epochs=config['epochs'], augmentation_policy=p,
-                                              batch_size=config['batch_size'], lr_decay=lr_decay)
+                    id_tag = f"{task}_{num_lines + 1}"
+                    h = supervised_train_loop(m, dataset, id_tag=id_tag,
+                                              strategy=config['strategy'], epochs=config['epochs'],
+                                              augmentation_policy=p, batch_size=config['batch_size'],
+                                              lr_decay=lr_decay)
                     print(f'Time: {time.time() - t1:.2f}s')
                     with open(results_file, 'a', newline='') as csvfile:
                         writer = csv.writer(csvfile, delimiter=',',
@@ -86,4 +96,4 @@ for _ in range(config['repeats']):  # repeats
                                          f"{h['train_acc'][best_idx]}", f"{h['val_acc'][best_idx]}",
                                          f"{time.time() - t1:.2f}", f"{h['file_name']}"])
                     with open(os.path.join(results_path, "episode", f"{h['file_name']}.json"), "w") as f:
-                        json.dump(h, f)
+                        json.dump(h, f, indent=4)

@@ -14,7 +14,7 @@ from augpolicies.core.util.parse_args import get_dataset_from_args, get_config_j
 
 set_tf_memory_growth_for_system()
 dataset = get_dataset_from_args()
-config, config_original = get_config_json()
+config = get_config_json()
 
 start_time = datetime.now().strftime('%m-%d-%Y_%H-%M-%S')
 task = os.path.splitext(os.path.basename(__file__))[0]
@@ -24,12 +24,12 @@ results_file = os.path.join(results_path, "summary_results.csv")
 
 try:
     os.makedirs(results_path)
+    os.makedirs(os.path.join(results_path, "episode"))
 except FileExistsError:
     pass
 
 with open(os.path.join(results_path, "config.json"), "w") as f:
-    json.dump(config_original, f)
-del config_original
+    json.dump(config, f, indent=4)
 
 try:
     with open(results_file, 'x', newline='') as csvfile:
@@ -49,16 +49,14 @@ for _ in range(config['repeats']):
     for i in range(4):
         for m in config['models']:
             t1 = time.time()
-            ap = NoAugmentationPolicy()
-            model = get_and_compile_model(m)
-            train, val, test = get_classificaiton_data(dataset=dataset)  # tf dataset
+            p = NoAugmentationPolicy()
             with open(results_file) as f:
                 num_lines = sum(1 for line in f)
-            id_tag = f"{results_file}_{num_lines + 1}"
-            h = supervised_train_loop(model, train, test, data_generator,
-                                      id_tag=id_tag, strategy=config['strategy'],
-                                      epochs=config['epochs'], augmentation_policy=ap,
-                                      early_stop=config['e_stop'], batch_size=config['batch_size'], lr_decay=lr_decay)
+            id_tag = f"{task}_{num_lines + 1}"
+            h = supervised_train_loop(m, dataset, id_tag=id_tag,
+                                      strategy=config['strategy'], epochs=config['epochs'],
+                                      augmentation_policy=p, batch_size=config['batch_size'],
+                                      lr_decay=lr_decay)
             with open(results_file, 'a', newline='') as csvfile:
                 writer = csv.writer(csvfile, delimiter=',',
                                     quotechar='|', quoting=csv.QUOTE_MINIMAL)
@@ -69,7 +67,7 @@ for _ in range(config['repeats']):
                                  f"{h['train_acc'][best_idx]}", f"{h['val_acc'][best_idx]}",
                                  f"{time.time() - t1:.2f}", f"{h['file_name']}"])
             with open(os.path.join(results_path, "episode", f"{h['file_name']}.json"), "w") as f:
-                json.dump(h, f)
+                json.dump(h, f, indent=4)
 
     for idx, aug in enumerate(config['aug']['choices']):
         prob = 0.0
@@ -82,16 +80,14 @@ for _ in range(config['repeats']):
                     _mag = 1.0
                     t1 = time.time()
                     func = [kwargs_func_prob(_prob)]
-                    ap = AugmentationPolicy([aug], func, num_to_apply=1)
-                    model = get_and_compile_model(m)
-                    train, val, test = get_classificaiton_data(dataset=dataset)
+                    p = AugmentationPolicy([aug], func, num_to_apply=1)
                     with open(results_file) as f:
                         num_lines = sum(1 for line in f)
-                    id_tag = f"{results_file}_{num_lines + 1}"
-                    h = supervised_train_loop(model, train, test, data_generator,
-                                              id_tag=id_tag, strategy=config['strategy'], 
-                                              epochs=config['epochs'], augmentation_policy=ap,
-                                              early_stop=config['e_stop'], batch_size=config['batch_size'], lr_decay=lr_decay)
+                    id_tag = f"{task}_{num_lines + 1}"
+                    h = supervised_train_loop(m, dataset, id_tag=id_tag,
+                                              strategy=config['strategy'], epochs=config['epochs'],
+                                              augmentation_policy=p, batch_size=config['batch_size'],
+                                              lr_decay=lr_decay)
                     with open(results_file, 'a', newline='') as csvfile:
                         writer = csv.writer(csvfile, delimiter=',',
                                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
@@ -102,7 +98,7 @@ for _ in range(config['repeats']):
                                          f"{h['train_acc'][best_idx]}", f"{h['val_acc'][best_idx]}",
                                          f"{time.time() - t1:.2f}", f"{h['file_name']}"])
                     with open(os.path.join(results_path, "episode", f"{h['file_name']}.json"), "w") as f:
-                        json.dump(h, f)
+                        json.dump(h, f, indent=4)
         else:
             for mag_f in range(5):
                 for prob_f in range(2):
@@ -112,16 +108,14 @@ for _ in range(config['repeats']):
                         _prob = 0.5 + (0.5 * prob_f)
                         t1 = time.time()
                         func = [kwargs_func_prob_mag(do_prob_mean=_prob, mag_mean=_mag)]
-                        ap = AugmentationPolicy([aug_], func, num_to_apply=1)
-                        model = get_and_compile_model(m)
-                        train, val, test = get_classificaiton_data(dataset=dataset)
+                        p = AugmentationPolicy([aug_], func, num_to_apply=1)
                         with open(results_file) as f:
                             num_lines = sum(1 for line in f)
-                        id_tag = f"{results_file}_{num_lines + 1}"
-                        h = supervised_train_loop(model, train, test, data_generator,
-                                                  id_tag=id_tag, strategy=config['strategy'], 
-                                                  epochs=config['epochs'], augmentation_policy=ap,
-                                                  early_stop=config['e_stop'], batch_size=config['batch_size'], lr_decay=lr_decay)
+                        id_tag = f"{task}_{num_lines + 1}"
+                        h = supervised_train_loop(m, dataset, id_tag=id_tag,
+                                                  strategy=config['strategy'], epochs=config['epochs'],
+                                                  augmentation_policy=p, batch_size=config['batch_size'],
+                                                  lr_decay=lr_decay)
                         with open(results_file, 'a', newline='') as csvfile:
                             writer = csv.writer(csvfile, delimiter=',',
                                                 quotechar='|', quoting=csv.QUOTE_MINIMAL)
@@ -132,4 +126,4 @@ for _ in range(config['repeats']):
                                              f"{h['train_acc'][best_idx]}", f"{h['val_acc'][best_idx]}",
                                              f"{time.time() - t1:.2f}", f"{h['file_name']}"])
                         with open(os.path.join(results_path, "episode", f"{h['file_name']}.json"), "w") as f:
-                            json.dump(h, f)
+                            json.dump(h, f, indent=4)

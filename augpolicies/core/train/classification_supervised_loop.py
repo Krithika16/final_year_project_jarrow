@@ -29,11 +29,11 @@ def get_val_step_fn(strategy):
     return val_step
 
 
-def eval_loop(val_ds, model, loss, val_step):
+def eval_loop(val_ds, model, loss, val_step_fn):
     e_val_loss_avg = tf.keras.metrics.Mean()
     e_val_acc = tf.keras.metrics.SparseCategoricalAccuracy()
     for x, y in val_ds:
-        val_loss, val_pred = val_step(model, x, y, loss)
+        val_loss, val_pred = val_step_fn(model, x, y, loss)
         e_val_loss_avg.update_state(val_loss)
         e_val_acc.update_state(y, val_pred)
     return e_val_loss_avg.result(), e_val_acc.result()
@@ -170,7 +170,7 @@ def supervised_train_loop(model_template, dataset, id_tag, strategy, *,
                     print("Early stopping at:", e + 1)
                     break
     if debug:
-        eval_loss, eval_acc = eval_loop(train_ds, model, loss=loss)
+        eval_loss, eval_acc = eval_loop(train_ds, model, loss, val_step_fn)
         tf.print(f"No Aug Loss: {eval_loss:.3f}, No Aug Acc: {eval_acc:.3f}, Duration: {time.time() - t0:.1f}, E: {e + 1}")
 
     history['train_losses'] = train_loss_results
@@ -186,7 +186,7 @@ def supervised_train_loop(model_template, dataset, id_tag, strategy, *,
     history['train_time'] = time.time() - t0
     history['file_name'] = f"{id_tag}_{datetime.now().strftime('%m-%d-%Y_%H-%M-%S')}"
 
-    history['strategy'] = strategy
+    history['strategy_str'] = str(strategy)
     history['loss'] = loss.name
     history['optimizer'] = str(optimizer)
     history['early_stop'] = early_stop if early_stop else "NA"

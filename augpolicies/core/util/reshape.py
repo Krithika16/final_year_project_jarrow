@@ -12,7 +12,6 @@ def make_3d(dataset):
 
 def pad_to_min_size(dataset, min_size):
     x, y = dataset
-    print(type(x))
     assert len(x.shape) == 4
     s = x.shape
     h, w = s[1], s[2]

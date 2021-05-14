@@ -1,3 +1,0 @@
-aug comparison is before lr decay is added.
-
-Other files are here for historical reference.
