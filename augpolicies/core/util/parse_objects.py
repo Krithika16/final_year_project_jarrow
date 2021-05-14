@@ -1,5 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras.datasets import cifar10, fashion_mnist
+from augpolicies.core.util.system_hardware import get_strategy_for_system
 from augpolicies.core.classification import (SimpleModel, ConvModel, EfficientNetB0)
 from augpolicies.augmentation_funcs.augmentation_2d import apply_random_brightness, \
     apply_random_contrast, apply_random_left_right_flip, apply_random_up_down_flip, apply_random_skew, apply_random_zoom, \
@@ -64,7 +65,11 @@ def parse_list(strs, parse_func):
 
 def parse_strategy(strat_str):
     if strat_str is None:
-        return tf.distribute.get_strategy()
+        return get_strategy_for_system()
+    elif strat_str == "gpu1":
+        return tf.distribute.OneDeviceStrategy("/gpu:0")
+    elif strat_str == "gpu2":
+        return tf.distribute.OneDeviceStrategy("/gpu:1")
     elif strat_str == "multi-gpu":
         return tf.distribute.MirroredStrategy()
     else:

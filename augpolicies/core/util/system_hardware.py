@@ -26,3 +26,15 @@ def set_tf_memory_growth_for_system():
         raise SystemError("Are you running inside a docker container with the host_hostname environment set?")
     else:
         raise NotImplementedError(f"Unknown system host name {system_name}")
+
+
+def get_strategy_for_system():
+    system_name = os.getenv("HOST_HOSTNAME")
+    if system_name.upper() == "ARCHER":
+        return tf.distribute.get_strategy()
+    elif system_name.upper() == "POMPEII-20":
+        return tf.distribute.MirroredStrategy()
+    elif system_name.upper() == "":
+        raise SystemError("Are you running inside a docker container with the host_hostname environment set?")
+    else:
+        raise NotImplementedError(f"Unknown system host name {system_name}")

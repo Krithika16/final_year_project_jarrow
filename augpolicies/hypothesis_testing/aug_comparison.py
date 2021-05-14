@@ -4,7 +4,7 @@ import csv
 import json
 import os
 
-from augpolicies.core.util.set_memory_growth import set_tf_memory_growth_for_system
+from augpolicies.core.util.system_hardware import set_tf_memory_growth_for_system
 from augpolicies.core.train.classification_supervised_loop import supervised_train_loop, get_lr_decay_closure
 from augpolicies.augmentation_funcs.augmentation_2d import kwargs_func_prob, kwargs_func_prob_mag
 from augpolicies.augmentation_funcs.augmentation_2d import apply_random_left_right_flip, apply_random_up_down_flip, apply_no_aug
