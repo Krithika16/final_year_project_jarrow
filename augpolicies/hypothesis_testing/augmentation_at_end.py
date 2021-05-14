@@ -1,3 +1,9 @@
+import time
+from datetime import datetime
+import csv
+import json
+import os
+
 from augpolicies.core.util import set_memory_growth
 from augpolicies.core.classification import (get_classificaiton_data, data_generator,
                                              get_and_compile_model)
@@ -5,20 +11,17 @@ from augpolicies.core.train.classification_supervised_loop import supervised_tra
 from augpolicies.augmentation_policies.baselines import HalfAugmentationPolicy
 from augpolicies.augmentation_funcs.augmentation_2d import kwargs_func_prob, kwargs_func_prob_mag
 from augpolicies.augmentation_funcs.augmentation_2d import apply_random_left_right_flip, apply_random_up_down_flip
-
-import time
-import random
-import csv
-import json
-import os
-
 from augpolicies.core.util.parse_args import get_dataset_from_args, get_config_json
+
+
 dataset = get_dataset_from_args()
 config = get_config_json()
 
-results_path = "data/results/aug_at_end/"
-file_name = "aug_at_end"
-file_path = os.path.join(results_path, f"{file_name}.csv")
+start_time = datetime.now().strftime('%m-%d-%Y_%H-%M-%S')
+task = os.path.splitext(os.path.basename(__file__))[0]
+
+results_path = f"data/results/{task}/{start_time}/"
+results_file = os.path.join(results_path, "summary_results.csv")
 
 try:
     os.makedirs(results_path)
@@ -33,7 +36,7 @@ lr_decay = get_lr_decay_closure(config['epochs'], config['lr']['decay'],
                                 warmup_proportion=config['lr']['warmup_prop'])
 
 try:
-    with open(file_path, 'x', newline='') as csvfile:
+    with open(results_file, 'x', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',',
                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
         writer.writerow(["dataset", "policy_name", "aug", "model", "prob", "mag", "e", "e_augs", "loss", "val_loss", "acc", "val_acc", "time", "results_tag"])
@@ -66,14 +69,14 @@ for _ in range(config['repeats']):  # repeats
 
                     p = HalfAugmentationPolicy([aug], func, config['epochs'], e_aug,
                                                num_to_apply=config['aug']['num_to_apply'], **p_kwargs)
-                    with open(file_path) as f:
+                    with open(results_file) as f:
                         num_lines = sum(1 for line in f)
-                    id_tag = f"{file_name}_{num_lines + 1}"
+                    id_tag = f"{__name__}_{num_lines + 1}"
                     h = supervised_train_loop(model, train, test, data_generator, id_tag=id_tag, 
                                               strategy=config['strategy'], epochs=config['epochs'], augmentation_policy=p,
                                               batch_size=config['batch_size'], lr_decay=lr_decay)
                     print(f'Time: {time.time() - t1:.2f}s')
-                    with open(file_path, 'a', newline='') as csvfile:
+                    with open(results_file, 'a', newline='') as csvfile:
                         writer = csv.writer(csvfile, delimiter=',',
                                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
                         best_idx = h['best_val_loss']['epoch']
@@ -82,5 +85,5 @@ for _ in range(config['repeats']):  # repeats
                                          f"{h['train_losses'][best_idx]}", f"{h['val_losses'][best_idx]}",
                                          f"{h['train_acc'][best_idx]}", f"{h['val_acc'][best_idx]}",
                                          f"{time.time() - t1:.2f}", f"{h['file_name']}"])
-                    with open(os.path.join(results_path, f"{h['file_name']}.json"), "w") as f:
+                    with open(os.path.join(results_path, "episode", f"{h['file_name']}.json"), "w") as f:
                         json.dump(h, f)
