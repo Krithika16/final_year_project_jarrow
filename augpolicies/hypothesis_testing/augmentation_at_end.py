@@ -1,13 +1,10 @@
 from augpolicies.core.util import set_memory_growth
 from augpolicies.core.classification import (get_classificaiton_data, data_generator,
-                                             get_and_compile_model,
-                                             SimpleModel, ConvModel, EfficientNetB0)
+                                             get_and_compile_model)
 from augpolicies.core.train.classification_supervised_loop import supervised_train_loop, get_lr_decay_closure
 from augpolicies.augmentation_policies.baselines import HalfAugmentationPolicy
 from augpolicies.augmentation_funcs.augmentation_2d import kwargs_func_prob, kwargs_func_prob_mag
-from augpolicies.augmentation_funcs.augmentation_2d import apply_random_brightness, \
-    apply_random_contrast, apply_random_left_right_flip, apply_random_up_down_flip, apply_random_skew, apply_random_zoom, \
-    apply_random_x_skew, apply_random_y_skew, apply_random_x_zoom, apply_random_y_zoom, apply_random_rotate, apply_random_cutout
+from augpolicies.augmentation_funcs.augmentation_2d import apply_random_left_right_flip, apply_random_up_down_flip
 
 import time
 import random
@@ -17,6 +14,7 @@ import os
 
 from augpolicies.core.util.parse_args import get_dataset_from_args, get_config_json
 dataset = get_dataset_from_args()
+config = get_config_json()
 
 results_path = "data/results/aug_at_end/"
 file_name = "aug_at_end"
@@ -26,8 +24,6 @@ try:
     os.makedirs(results_path)
 except FileExistsError:
     pass
-
-config = get_config_json()
 
 e_augs = list(range(0, config['epochs'] + 1, 2))
 lr_decay = get_lr_decay_closure(config['epochs'], config['lr']['decay'],

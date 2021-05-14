@@ -1,4 +1,4 @@
-import tensorflow as tf
+from tensorflow.keras.datasets import cifar10, fashion_mnist
 from augpolicies.core.classification import (SimpleModel, ConvModel, EfficientNetB0)
 from augpolicies.augmentation_funcs.augmentation_2d import apply_random_brightness, \
     apply_random_contrast, apply_random_left_right_flip, apply_random_up_down_flip, apply_random_skew, apply_random_zoom, \
@@ -7,10 +7,11 @@ from augpolicies.augmentation_funcs.augmentation_2d import apply_random_brightne
 
 def parse_dataset(dataset_str):
     if dataset_str == 'cifar10':
-        dataset = tf.keras.datasets.cifar10
+        dataset = cifar10
     elif dataset_str == 'fmnist':
-        dataset = tf.keras.datasets.fashion_mnist
+        dataset = fashion_mnist
     return dataset
+
 
 def parse_model(model_str):
     if model_str == 'SimpleModel':
