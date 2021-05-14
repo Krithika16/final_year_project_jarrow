@@ -28,8 +28,10 @@ def get_config_json():
     config_path = os.path.join(os.getcwd(), 'data', 'configs', args.config)
     with open(config_path) as f:
         config = json.load(f)
+    with open(config_path) as f:
+        config_original = json.load(f)
 
     config['aug']['choices'] = parse_list(config['aug']['choices'], parse_aug)
     config['models'] = parse_list(config['models'], parse_model)
     config['strategy'] = parse_strategy(config['strategy'])
-    return config
+    return config, config_original

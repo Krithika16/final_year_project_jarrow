@@ -1,4 +1,3 @@
-from augpolicies.core.train.classification_supervised_loop import supervised_train_loop
 from augpolicies.augmentation_policies.baselines import \
     NoAugmentationPolicy, AugmentationPolicy
 import tensorflow as tf
@@ -6,7 +5,7 @@ import numpy as np
 import random
 
 
-def get_classificaiton_data(dataset=tf.keras.datasets.fashion_mnist.load_data, val_split=None, normalise_factor=255.0):
+def get_classification_data(dataset=tf.keras.datasets.fashion_mnist.load_data, val_split=0.1, normalise_factor=255.0):
     (x_train, y_train), (x_test, y_test) = dataset.load_data()
     if len(x_train.shape) == 3:
         x_train = x_train[..., np.newaxis]
@@ -18,11 +17,11 @@ def get_classificaiton_data(dataset=tf.keras.datasets.fashion_mnist.load_data, v
         val_length = int(len(x_train) * val_split)
         x_train, y_train = x_train[:-val_length, ...], y_train[:-val_length, ...]
         x_val, y_val = x_train[-val_length:, ...], y_train[-val_length:, ...]
-        x_val = np.float32(x_val)
     else:
         x_val = y_val = None
 
     x_train = np.float32(x_train)
+    x_val = np.float32(x_val)
     x_test = np.float32(x_test)
 
     train = (x_train, y_train)
@@ -31,18 +30,14 @@ def get_classificaiton_data(dataset=tf.keras.datasets.fashion_mnist.load_data, v
     return train, val, test
 
 
-def data_generator(x, y, batch_size=32, train=True):
-    x_len = len(x)
-    idxes = np.array(list(range(x_len)))
-    if train:
-        np.random.shuffle(idxes)
-    idx = 0
-    while idx + batch_size < (x_len - 1):
-        batch_idxes = idxes[idx: idx + batch_size]
-        x_ = x[batch_idxes]
-        y_ = y[batch_idxes]
-        yield (x_, y_)
-        idx += batch_size
+def get_and_compile_model(model_func, lr=0.001, from_logits=True):
+    model = model_func()
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(lr=lr),
+        loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=from_logits),
+        metrics=['accuracy'],
+    )
+    return model
 
 
 class ConvModel(tf.keras.Model):
@@ -119,11 +114,3 @@ class SimpleModel_Softmax(tf.keras.Model):
         return self.m_.call(inputs, training=training)
 
 
-def get_and_compile_model(model_func, lr=0.001, from_logits=True):
-    model = model_func()
-    model.compile(
-        optimizer=tf.keras.optimizers.Adam(lr=lr),
-        loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=from_logits),
-        metrics=['accuracy'],
-    )
-    return model

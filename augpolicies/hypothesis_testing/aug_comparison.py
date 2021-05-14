@@ -4,19 +4,17 @@ import csv
 import json
 import os
 
-from augpolicies.core.util import set_memory_growth
-from augpolicies.core.classification import (get_classificaiton_data, data_generator,
-                                             get_and_compile_model)
-from augpolicies.augmentation_funcs.augmentation_2d import kwargs_func_prob, kwargs_func_prob_mag
-from augpolicies.augmentation_funcs.augmentation_2d import apply_random_left_right_flip, apply_random_up_down_flip
+from augpolicies.core.util.set_memory_growth import set_tf_memory_growth_for_system
 from augpolicies.core.train.classification_supervised_loop import supervised_train_loop, get_lr_decay_closure
-from augpolicies.augmentation_policies.baselines import (AugmentationPolicy,
-                                                         NoAugmentationPolicy)
+from augpolicies.augmentation_funcs.augmentation_2d import kwargs_func_prob, kwargs_func_prob_mag
+from augpolicies.augmentation_funcs.augmentation_2d import apply_random_left_right_flip, apply_random_up_down_flip, apply_no_aug
+from augpolicies.augmentation_policies.baselines import AugmentationPolicy, NoAugmentationPolicy
 from augpolicies.core.util.parse_args import get_dataset_from_args, get_config_json
 
 
+set_tf_memory_growth_for_system()
 dataset = get_dataset_from_args()
-config = get_config_json()
+config, config_original = get_config_json()
 
 start_time = datetime.now().strftime('%m-%d-%Y_%H-%M-%S')
 task = os.path.splitext(os.path.basename(__file__))[0]
@@ -28,6 +26,10 @@ try:
     os.makedirs(results_path)
 except FileExistsError:
     pass
+
+with open(os.path.join(results_path, "config.json"), "w") as f:
+    json.dump(config_original, f)
+del config_original
 
 try:
     with open(results_file, 'x', newline='') as csvfile:
@@ -66,7 +68,7 @@ for _ in range(config['repeats']):
                                  f"{h['train_losses'][best_idx]}", f"{h['val_losses'][best_idx]}",
                                  f"{h['train_acc'][best_idx]}", f"{h['val_acc'][best_idx]}",
                                  f"{time.time() - t1:.2f}", f"{h['file_name']}"])
-            with open(os.path.join(results_path, f"{h['file_name']}.json"), "w") as f:
+            with open(os.path.join(results_path, "episode", f"{h['file_name']}.json"), "w") as f:
                 json.dump(h, f)
 
     for idx, aug in enumerate(config['aug']['choices']):
@@ -99,7 +101,7 @@ for _ in range(config['repeats']):
                                          f"{h['train_losses'][best_idx]}", f"{h['val_losses'][best_idx]}",
                                          f"{h['train_acc'][best_idx]}", f"{h['val_acc'][best_idx]}",
                                          f"{time.time() - t1:.2f}", f"{h['file_name']}"])
-                    with open(os.path.join(results_path, f"{h['file_name']}.json"), "w") as f:
+                    with open(os.path.join(results_path, "episode", f"{h['file_name']}.json"), "w") as f:
                         json.dump(h, f)
         else:
             for mag_f in range(5):
@@ -129,5 +131,5 @@ for _ in range(config['repeats']):
                                              f"{h['train_losses'][best_idx]}", f"{h['val_losses'][best_idx]}",
                                              f"{h['train_acc'][best_idx]}", f"{h['val_acc'][best_idx]}",
                                              f"{time.time() - t1:.2f}", f"{h['file_name']}"])
-                        with open(os.path.join(results_path, f"{h['file_name']}.json"), "w") as f:
+                        with open(os.path.join(results_path, "episode", f"{h['file_name']}.json"), "w") as f:
                             json.dump(h, f)

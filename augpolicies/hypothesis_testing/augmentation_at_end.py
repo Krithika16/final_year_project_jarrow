@@ -4,18 +4,17 @@ import csv
 import json
 import os
 
-from augpolicies.core.util import set_memory_growth
-from augpolicies.core.classification import (get_classificaiton_data, data_generator,
-                                             get_and_compile_model)
+from augpolicies.core.util.set_memory_growth import set_tf_memory_growth_for_system
 from augpolicies.core.train.classification_supervised_loop import supervised_train_loop, get_lr_decay_closure
-from augpolicies.augmentation_policies.baselines import HalfAugmentationPolicy
 from augpolicies.augmentation_funcs.augmentation_2d import kwargs_func_prob, kwargs_func_prob_mag
 from augpolicies.augmentation_funcs.augmentation_2d import apply_random_left_right_flip, apply_random_up_down_flip
+from augpolicies.augmentation_policies.baselines import HalfAugmentationPolicy
 from augpolicies.core.util.parse_args import get_dataset_from_args, get_config_json
 
 
+set_tf_memory_growth_for_system()
 dataset = get_dataset_from_args()
-config = get_config_json()
+config, config_original = get_config_json()
 
 start_time = datetime.now().strftime('%m-%d-%Y_%H-%M-%S')
 task = os.path.splitext(os.path.basename(__file__))[0]
@@ -28,12 +27,9 @@ try:
 except FileExistsError:
     pass
 
-e_augs = list(range(0, config['epochs'] + 1, 2))
-lr_decay = get_lr_decay_closure(config['epochs'], config['lr']['decay'],
-                                lr_decay_factor=config['lr']['decay_factor'],
-                                lr_start=config['lr']['start'], lr_min=config['lr']['min'],
-                                lr_warmup=config['lr']['warmup'],
-                                warmup_proportion=config['lr']['warmup_prop'])
+with open(os.path.join(results_path, "config.json"), "w") as f:
+    json.dump(config_original, f)
+del config_original
 
 try:
     with open(results_file, 'x', newline='') as csvfile:
@@ -42,6 +38,13 @@ try:
         writer.writerow(["dataset", "policy_name", "aug", "model", "prob", "mag", "e", "e_augs", "loss", "val_loss", "acc", "val_acc", "time", "results_tag"])
 except FileExistsError:
     pass
+
+e_augs = list(range(0, config['epochs'] + 1, 2))
+lr_decay = get_lr_decay_closure(config['epochs'], config['lr']['decay'],
+                                lr_decay_factor=config['lr']['decay_factor'],
+                                lr_start=config['lr']['start'], lr_min=config['lr']['min'],
+                                lr_warmup=config['lr']['warmup'],
+                                warmup_proportion=config['lr']['warmup_prop'])
 
 names = ['interval', 'start', 'end']
 policies = [{'interval': True}, {'start': True}, {'start': False}]
@@ -55,10 +58,7 @@ for _ in range(config['repeats']):  # repeats
             for n, p_kwargs in zip(names, policies):
                 for e_aug in e_augs:
                     print(f"{aug.__name__} - {m.__name__} - {n} - {e_aug}")
-
                     _mag = mag
-                    train, val, test = get_classificaiton_data(dataset=dataset)
-                    model = get_and_compile_model(m)
                     t1 = time.time()
 
                     if aug is apply_random_left_right_flip or aug is apply_random_up_down_flip:
@@ -72,7 +72,7 @@ for _ in range(config['repeats']):  # repeats
                     with open(results_file) as f:
                         num_lines = sum(1 for line in f)
                     id_tag = f"{__name__}_{num_lines + 1}"
-                    h = supervised_train_loop(model, train, test, data_generator, id_tag=id_tag, 
+                    h = supervised_train_loop(m, dataset, id_tag=id_tag, 
                                               strategy=config['strategy'], epochs=config['epochs'], augmentation_policy=p,
                                               batch_size=config['batch_size'], lr_decay=lr_decay)
                     print(f'Time: {time.time() - t1:.2f}s')

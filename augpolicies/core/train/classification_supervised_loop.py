@@ -1,8 +1,9 @@
-from augpolicies.core.util.reshape import make_3d, pad_to_min_size
 import time
+from datetime import datetime
 import tensorflow as tf
 import numpy as np
-from datetime import datetime
+from augpolicies.core.classification import get_and_compile_model, get_classification_data
+from augpolicies.core.util.reshape import make_3d, pad_to_min_size
 
 
 def get_train_step_fn(strategy):
@@ -16,6 +17,7 @@ def get_train_step_fn(strategy):
             optimizer.apply_gradients(zip(gradients, model.trainable_variables))
             return loss, pred
     return train_step
+
 
 def get_val_step_fn(strategy):
     with strategy.scope():
@@ -36,11 +38,13 @@ def eval_loop(val_ds, model, loss, val_step):
         e_val_acc.update_state(y, val_pred)
     return e_val_loss_avg.result(), e_val_acc.result()
 
+
 def get_epoch_fn(strategy):
     with strategy.scope():
-        def epoch(train_ds, val_ds, model, augmentation_policy, epoch_number,
-                train_step_fn, val_step_fn,
-                loss, optimizer):
+        def epoch(train_ds, val_ds, model,
+                  augmentation_policy, epoch_number,
+                  train_step_fn, val_step_fn,
+                  loss, optimizer):
             e_loss_avg = tf.keras.metrics.Mean()
             e_acc = tf.keras.metrics.SparseCategoricalAccuracy()
             for x, y in train_ds:
@@ -52,6 +56,7 @@ def get_epoch_fn(strategy):
             e_val_loss_avg, e_val_acc = eval_loop(val_ds, model, loss, val_step_fn)
             return e_loss_avg.result(), e_val_loss_avg, e_acc.result(), e_val_acc
     return epoch
+
 
 class get_lr_decay_closure:
     def __init__(self, total_epochs: int, e_decay: int, *,
@@ -93,7 +98,8 @@ class get_lr_decay_closure:
         return updated_learning_rate
 
 
-def supervised_train_loop(model, train, val, data_generator, id_tag, strategy, *, 
+def supervised_train_loop(model_template, dataset, id_tag, strategy, *,
+                          get_data_func=get_classification_data,
                           augmentation_policy=None,
                           batch_size=128, epochs=20, debug=True,
                           early_stop=None, lr_decay=None,
@@ -105,6 +111,10 @@ def supervised_train_loop(model, train, val, data_generator, id_tag, strategy, *
     train_acc_results = []
     train_val_acc_results = []
 
+    with strategy.scope():
+        model = get_and_compile_model(model_template)
+
+    train, val, _ = get_data_func(dataset=dataset)
     if model.requires_3d:
         train = make_3d(train)
         val = make_3d(val)
@@ -112,8 +122,9 @@ def supervised_train_loop(model, train, val, data_generator, id_tag, strategy, *
     train = pad_to_min_size(train, model.min_size)
     val = pad_to_min_size(val, model.min_size)
 
-    train_ds = tf.data.Dataset.from_generator(data_generator, (tf.float32, tf.int32), args=(*train, batch_size, True))
-    val_ds = tf.data.Dataset.from_generator(data_generator, (tf.float32, tf.int32), args=(*val, batch_size, False))
+    train_ds = tf.data.Dataset.from_tensor_slices(train)
+    train_ds = train_ds.shuffle(buffer_size=1024).batch(batch_size)
+    val_ds = tf.data.Dataset.from_tensor_slices(val).batch(batch_size)
 
     # strategy functions
     train_ds = strategy.experimental_distribute_dataset(train_ds)
