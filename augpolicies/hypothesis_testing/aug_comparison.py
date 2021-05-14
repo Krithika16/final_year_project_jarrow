@@ -5,6 +5,7 @@ import json
 import os
 
 from augpolicies.core.util.system_hardware import set_tf_memory_growth_for_system
+from augpolicies.core.util.dict2json import serializable_objects_in_dict
 from augpolicies.core.train.classification_supervised_loop import supervised_train_loop, get_lr_decay_closure
 from augpolicies.augmentation_funcs.augmentation_2d import kwargs_func_prob, kwargs_func_prob_mag
 from augpolicies.augmentation_funcs.augmentation_2d import apply_random_left_right_flip, apply_random_up_down_flip, apply_no_aug
@@ -28,8 +29,9 @@ try:
 except FileExistsError:
     pass
 
+serializable_config = serializable_objects_in_dict(config)
 with open(os.path.join(results_path, "config.json"), "w") as f:
-    json.dump(config, f, indent=4)
+    json.dump(serializable_config, f, indent=4)
 
 try:
     with open(results_file, 'x', newline='') as csvfile:

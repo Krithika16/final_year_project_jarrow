@@ -29,14 +29,7 @@ try:
 except FileExistsError:
     pass
 
-import pprint
-pp = pprint.PrettyPrinter(indent=4)
-pp.pprint(config)
-
 serializable_config = serializable_objects_in_dict(config)
-
-pp.pprint(serializable_config)
-
 with open(os.path.join(results_path, "config.json"), "w") as f:
     json.dump(serializable_config, f, indent=4)
 
