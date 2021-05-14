@@ -5,26 +5,29 @@ import numpy as np
 from datetime import datetime
 
 
-def get_train_step_fn():
-    @tf.function
-    def train_step(model, inputs, targets, optimizer, loss_func):
-        with tf.GradientTape() as tape:
-            pred = model(inputs, training=True)
-            loss = loss_func(targets, pred)
-        gradients = tape.gradient(loss, model.trainable_variables)
-        optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-        return loss, pred
+def get_train_step_fn(strategy):
+    with strategy.scope():
+        @tf.function
+        def train_step(model, inputs, targets, optimizer, loss_func):
+            with tf.GradientTape() as tape:
+                pred = model(inputs, training=True)
+                loss = loss_func(targets, pred)
+            gradients = tape.gradient(loss, model.trainable_variables)
+            optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+            return loss, pred
     return train_step
 
+def get_val_step_fn(strategy):
+    with strategy.scope():
+        @tf.function
+        def val_step(model, inputs, targets, loss_func):
+            pred = model(inputs, training=False)
+            loss = loss_func(targets, pred)
+            return loss, pred
+    return val_step
 
-@tf.function
-def val_step(model, inputs, targets, loss_func):
-    pred = model(inputs, training=False)
-    loss = loss_func(targets, pred)
-    return loss, pred
 
-
-def eval_loop(val_ds, model, loss):
+def eval_loop(val_ds, model, loss, val_step):
     e_val_loss_avg = tf.keras.metrics.Mean()
     e_val_acc = tf.keras.metrics.SparseCategoricalAccuracy()
     for x, y in val_ds:
@@ -33,20 +36,22 @@ def eval_loop(val_ds, model, loss):
         e_val_acc.update_state(y, val_pred)
     return e_val_loss_avg.result(), e_val_acc.result()
 
-
-def epoch(train_ds, val_ds, model, augmentation_policy, epoch_number, train_step_fn,
-          loss, optimizer):
-    e_loss_avg = tf.keras.metrics.Mean()
-    e_acc = tf.keras.metrics.SparseCategoricalAccuracy()
-    for x, y in train_ds:
-        if augmentation_policy is not None:
-            x, y = augmentation_policy((x, y, epoch_number))
-        tr_loss, tr_pred = train_step_fn(model, x, y, optimizer, loss)
-        e_loss_avg.update_state(tr_loss)
-        e_acc.update_state(y, tr_pred)
-    e_val_loss_avg, e_val_acc = eval_loop(val_ds, model, loss)
-    return e_loss_avg.result(), e_val_loss_avg, e_acc.result(), e_val_acc
-
+def get_epoch_fn(strategy):
+    with strategy.scope():
+        def epoch(train_ds, val_ds, model, augmentation_policy, epoch_number,
+                train_step_fn, val_step_fn,
+                loss, optimizer):
+            e_loss_avg = tf.keras.metrics.Mean()
+            e_acc = tf.keras.metrics.SparseCategoricalAccuracy()
+            for x, y in train_ds:
+                if augmentation_policy is not None:
+                    x, y = augmentation_policy((x, y, epoch_number))
+                tr_loss, tr_pred = train_step_fn(model, x, y, optimizer, loss)
+                e_loss_avg.update_state(tr_loss)
+                e_acc.update_state(y, tr_pred)
+            e_val_loss_avg, e_val_acc = eval_loop(val_ds, model, loss, val_step_fn)
+            return e_loss_avg.result(), e_val_loss_avg, e_acc.result(), e_val_acc
+    return epoch
 
 class get_lr_decay_closure:
     def __init__(self, total_epochs: int, e_decay: int, *,
@@ -110,7 +115,12 @@ def supervised_train_loop(model, train, val, data_generator, id_tag, strategy, *
     train_ds = tf.data.Dataset.from_generator(data_generator, (tf.float32, tf.int32), args=(*train, batch_size, True))
     val_ds = tf.data.Dataset.from_generator(data_generator, (tf.float32, tf.int32), args=(*val, batch_size, False))
 
-    train_step_fn = get_train_step_fn()
+    # strategy functions
+    train_ds = strategy.experimental_distribute_dataset(train_ds)
+    val_ds = strategy.experimental_distribute_dataset(val_ds)
+    train_step_fn = get_train_step_fn(strategy)
+    val_step_fn = get_val_step_fn(strategy)
+    epoch = get_epoch_fn(strategy)
 
     best_loss = np.inf
     best_loss_at = -1
@@ -127,7 +137,9 @@ def supervised_train_loop(model, train, val, data_generator, id_tag, strategy, *
             lr = lr_decay(e, best_loss_at, optimizer.learning_rate)
             optimizer.learning_rate = lr
 
-        e_loss_avg, e_val_loss_avg, e_acc, e_val_acc = epoch(train_ds, val_ds, model, augmentation_policy, e, train_step_fn, loss=loss, optimizer=optimizer)
+        e_loss_avg, e_val_loss_avg, e_acc, e_val_acc = epoch(train_ds, val_ds, model, augmentation_policy, e,
+                                                             train_step_fn, val_step_fn,
+                                                             loss=loss, optimizer=optimizer)
 
         train_loss_results.append(e_loss_avg.numpy().tolist())
         train_val_loss_results.append(e_val_loss_avg.numpy().tolist())
