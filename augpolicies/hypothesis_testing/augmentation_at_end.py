@@ -69,8 +69,8 @@ for _ in range(config['repeats']):  # repeats
                     with open(file_path) as f:
                         num_lines = sum(1 for line in f)
                     id_tag = f"{file_name}_{num_lines + 1}"
-                    h = supervised_train_loop(model, train, test, data_generator, id_tag=id_tag,
-                                              epochs=config['epochs'], augmentation_policy=p,
+                    h = supervised_train_loop(model, train, test, data_generator, id_tag=id_tag, 
+                                              strategy=config['strategy'], epochs=config['epochs'], augmentation_policy=p,
                                               batch_size=config['batch_size'], lr_decay=lr_decay)
                     print(f'Time: {time.time() - t1:.2f}s')
                     with open(file_path, 'a', newline='') as csvfile:

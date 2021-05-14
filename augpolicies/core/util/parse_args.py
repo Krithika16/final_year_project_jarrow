@@ -1,7 +1,7 @@
 import argparse
 import os
 import json
-from augpolicies.core.util.parse_objects import parse_dataset, parse_list, parse_model, parse_aug
+from augpolicies.core.util.parse_objects import parse_dataset, parse_list, parse_model, parse_aug, parse_strategy
 
 
 
@@ -31,4 +31,5 @@ def get_config_json():
 
     config['aug']['choices'] = parse_list(config['aug']['choices'], parse_aug)
     config['models'] = parse_list(config['models'], parse_model)
+    config['strategy'] = parse_strategy(config['strategy'])
     return config

@@ -1,3 +1,4 @@
+import tensorflow as tf
 from tensorflow.keras.datasets import cifar10, fashion_mnist
 from augpolicies.core.classification import (SimpleModel, ConvModel, EfficientNetB0)
 from augpolicies.augmentation_funcs.augmentation_2d import apply_random_brightness, \
@@ -7,51 +8,64 @@ from augpolicies.augmentation_funcs.augmentation_2d import apply_random_brightne
 
 def parse_dataset(dataset_str):
     if dataset_str == 'cifar10':
-        dataset = cifar10
+        return cifar10
     elif dataset_str == 'fmnist':
-        dataset = fashion_mnist
-    return dataset
+        return fashion_mnist
+    else:
+        raise ValueError(f"dataset_str {dataset_str} is not recognised,")
 
 
 def parse_model(model_str):
     if model_str == 'SimpleModel':
-        model = SimpleModel
+        return SimpleModel
     elif model_str == 'ConvModel':
-        model = ConvModel
+        return ConvModel
     elif model_str == 'EfficientNetB0':
-        model = EfficientNetB0
-    return model
+        return EfficientNetB0
+    else:
+        raise ValueError(f"model_str {model_str} is not recognised,")
 
 
 def parse_aug(aug_str):
     if aug_str == "apply_random_left_right_flip":
-        aug = apply_random_left_right_flip
+        return apply_random_left_right_flip
     elif aug_str == "apply_random_up_down_flip":
-        aug = apply_random_up_down_flip
+        return apply_random_up_down_flip
     elif aug_str == "apply_random_contrast":
-        aug = apply_random_contrast
+        return apply_random_contrast
     elif aug_str == "apply_random_skew":
-        aug = apply_random_skew
+        return apply_random_skew
     elif aug_str == "apply_random_zoom":
-        aug = apply_random_zoom
+        return apply_random_zoom
     elif aug_str == "apply_random_x_skew":
-        aug = apply_random_x_skew
+        return apply_random_x_skew
     elif aug_str == "apply_random_y_skew":
-        aug = apply_random_y_skew
+        return apply_random_y_skew
     elif aug_str == "apply_random_x_zoom":
-        aug = apply_random_x_zoom
+        return apply_random_x_zoom
     elif aug_str == "apply_random_y_zoom":
-        aug = apply_random_y_zoom
+        return apply_random_y_zoom
     elif aug_str == "apply_random_brightness":
-        aug = apply_random_brightness
+        return apply_random_brightness
     elif aug_str == "apply_random_rotate":
-        aug = apply_random_rotate
+        return apply_random_rotate
     elif aug_str == "apply_random_cutout":
-        aug = apply_random_cutout
-    return aug
+        return apply_random_cutout
+    else:
+        raise ValueError(f"aug_str {aug_str} is not recognised,")
+
 
 def parse_list(strs, parse_func):
     objects = []
     for object_str in strs:
         objects.append(parse_func(object_str))
     return objects
+
+
+def parse_strategy(strat_str):
+    if strat_str is None:
+        return tf.distribute.get_strategy()
+    elif strat_str == "multi-gpu":
+        return tf.distribute.MirroredStrategy()
+    else:
+        raise ValueError(f"strat_str {strat_str} is not recognised,")

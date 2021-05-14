@@ -36,8 +36,8 @@ except FileExistsError:
 
 from augpolicies.core.util.parse_args import get_dataset_from_args, get_config_json
 dataset = get_dataset_from_args()
-
 config = get_config_json()
+
 
 lr_decay = get_lr_decay_closure(config['epochs'], config['lr']['decay'],
                                 lr_decay_factor=config['lr']['decay_factor'],
@@ -56,13 +56,14 @@ for _ in range(config['repeats']):
                 num_lines = sum(1 for line in f)
             id_tag = f"{file_name}_{num_lines + 1}"
             h = supervised_train_loop(model, train, test, data_generator,
-                                      id_tag=id_tag, epochs=config['epochs'], augmentation_policy=ap,
+                                      id_tag=id_tag, strategy=config['strategy'], epochs=config['epochs'], augmentation_policy=ap,
                                       early_stop=config['e_stop'], batch_size=config['batch_size'], lr_decay=lr_decay)
             with open(file_path, 'a', newline='') as csvfile:
                 writer = csv.writer(csvfile, delimiter=',',
                                     quotechar='|', quoting=csv.QUOTE_MINIMAL)
                 best_idx = h['best_val_loss']['epoch']
-                writer.writerow([dataset.__name__.split(".")[-1], "No Aug", f"{m.__name__}", f"{config['epochs']}", f"{best_idx+1}", "-0.1", "-0.1",
+                writer.writerow([dataset.__name__.split(".")[-1], "No Aug", f"{m.__name__}",
+                                 f"{config['epochs']}", f"{best_idx+1}", "-0.1", "-0.1",
                                  f"{h['train_losses'][best_idx]}", f"{h['val_losses'][best_idx]}",
                                  f"{h['train_acc'][best_idx]}", f"{h['val_acc'][best_idx]}",
                                  f"{time.time() - t1:.2f}", f"{h['file_name']}"])
@@ -88,13 +89,15 @@ for _ in range(config['repeats']):
                     with open(file_path) as f:
                         num_lines = sum(1 for line in f)
                     id_tag = f"{file_name}_{num_lines + 1}"
-                    h = supervised_train_loop(model, train, test, data_generator, id_tag=id_tag, epochs=config['epochs'], augmentation_policy=ap,
+                    h = supervised_train_loop(model, train, test, data_generator, id_tag=id_tag, strategy=config['strategy'], 
+                                              epochs=config['epochs'], augmentation_policy=ap,
                                               early_stop=config['e_stop'], batch_size=config['batch_size'], lr_decay=lr_decay)
                     with open(file_path, 'a', newline='') as csvfile:
                         writer = csv.writer(csvfile, delimiter=',',
                                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
                         best_idx = h['best_val_loss']['epoch']
-                        writer.writerow([dataset.__name__.split(".")[-1], aug.__name__, f"{m.__name__}", f"{config['epochs']}", f"{best_idx+1}", f"{_prob}", f"{_mag}",
+                        writer.writerow([dataset.__name__.split(".")[-1], aug.__name__, f"{m.__name__}",
+                                         f"{config['epochs']}", f"{best_idx+1}", f"{_prob}", f"{_mag}",
                                          f"{h['train_losses'][best_idx]}", f"{h['val_losses'][best_idx]}",
                                          f"{h['train_acc'][best_idx]}", f"{h['val_acc'][best_idx]}",
                                          f"{time.time() - t1:.2f}", f"{h['file_name']}"])
@@ -117,13 +120,15 @@ for _ in range(config['repeats']):
                         with open(file_path) as f:
                             num_lines = sum(1 for line in f)
                         id_tag = f"{file_name}_{num_lines + 1}"
-                        h = supervised_train_loop(model, train, test, data_generator, id_tag=id_tag, epochs=config['epochs'], augmentation_policy=ap,
+                        h = supervised_train_loop(model, train, test, data_generator, id_tag=id_tag, strategy=config['strategy'], 
+                                                  epochs=config['epochs'], augmentation_policy=ap,
                                                   early_stop=config['e_stop'], batch_size=config['batch_size'], lr_decay=lr_decay)
                         with open(file_path, 'a', newline='') as csvfile:
                             writer = csv.writer(csvfile, delimiter=',',
                                                 quotechar='|', quoting=csv.QUOTE_MINIMAL)
                             best_idx = h['best_val_loss']['epoch']
-                            writer.writerow([dataset.__name__.split(".")[-1], aug.__name__, f"{m.__name__}", f"{config['epochs']}", f"{best_idx+1}", f"{_prob}", f"{_mag}",
+                            writer.writerow([dataset.__name__.split(".")[-1], aug.__name__, f"{m.__name__}",
+                                             f"{config['epochs']}", f"{best_idx+1}", f"{_prob}", f"{_mag}",
                                              f"{h['train_losses'][best_idx]}", f"{h['val_losses'][best_idx]}",
                                              f"{h['train_acc'][best_idx]}", f"{h['val_acc'][best_idx]}",
                                              f"{time.time() - t1:.2f}", f"{h['file_name']}"])

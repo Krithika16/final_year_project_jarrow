@@ -48,36 +48,6 @@ def epoch(train_ds, val_ds, model, augmentation_policy, epoch_number, train_step
     return e_loss_avg.result(), e_val_loss_avg, e_acc.result(), e_val_acc
 
 
-# def get_lr_decay_closure(total_epochs: int, e_decay: int, *,
-#                          lr_decay_factor: float, lr_start: float, lr_min: float,
-#                          lr_warmup: float, warmup_proportion: float):
-#     # total_epochs: expected total training length
-#     # e_decay: number of epochs till decay
-#     # lr decay factor
-#     # lr at start after the warm up
-#     # min lr
-#     # lr during warmup, lr_warmup -> lr_start
-
-#     warmup_epoch_length = int(total_epochs * warmup_proportion)
-
-#     def lr_func(current_epoch, best_loss_at, learning_rate):
-#         updated_learning_rate = learning_rate
-#         if (current_epoch <= warmup_epoch_length - 1) and (warmup_epoch_length > 0):
-#             # warmup here
-#             warmup_left = (warmup_epoch_length - 1 - current_epoch) / (warmup_epoch_length)
-#             updated_learning_rate = lr_warmup * (warmup_left) + lr_start * (1 - warmup_left)
-#         else:
-#             # main loop with lr decay
-#             if current_epoch - best_loss_at >= e_decay:
-#                 if (current_epoch - best_loss_at) % e_decay == 0:
-#                     temp_learning_rate = learning_rate * lr_decay_factor
-#                     if temp_learning_rate >= lr_min:
-#                         updated_learning_rate = temp_learning_rate
-#             else:
-#                 updated_learning_rate = learning_rate
-#         return updated_learning_rate
-#     return lr_func
-
 class get_lr_decay_closure:
     def __init__(self, total_epochs: int, e_decay: int, *,
                  lr_decay_factor: float, lr_start: float, lr_min: float,
@@ -118,7 +88,8 @@ class get_lr_decay_closure:
         return updated_learning_rate
 
 
-def supervised_train_loop(model, train, val, data_generator, id_tag, *, augmentation_policy=None,
+def supervised_train_loop(model, train, val, data_generator, id_tag, strategy, *, 
+                          augmentation_policy=None,
                           batch_size=128, epochs=20, debug=True,
                           early_stop=None, lr_decay=None,
                           loss=None, optimizer=None):
@@ -192,6 +163,7 @@ def supervised_train_loop(model, train, val, data_generator, id_tag, *, augmenta
     history['train_time'] = time.time() - t0
     history['file_name'] = f"{id_tag}_{datetime.now().strftime('%m-%d-%Y_%H-%M-%S')}"
 
+    history['strategy'] = strategy
     history['loss'] = loss.name
     history['optimizer'] = str(optimizer)
     history['early_stop'] = early_stop if early_stop else "NA"
