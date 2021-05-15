@@ -6,7 +6,6 @@ COPY requirements.txt requirements.txt
 
 # Install tensorflow and reqs
 RUN pip install -U pip
-RUN pip install -U tensorflow
 RUN pip install -U tensorflow-addons
 RUN pip install sklearn
 RUN pip install pandas
@@ -17,11 +16,13 @@ RUN pip install jupyterlab
 RUN pip install future-breakpoint
 
 RUN apt-get update
+# RUN apt-get upgrade -y
 RUN apt-get install -y tmux
 RUN apt-get install -y nano
 RUN apt-get install -y sudo
 RUN apt-get install -y task-spooler
 RUN apt-get install -y less
+RUN apt-get install -y git
 
 ARG user=joe
 ARG group=joe
