@@ -10,17 +10,17 @@ from augpolicies.core.train.classification_supervised_loop import supervised_tra
 from augpolicies.augmentation_funcs.augmentation_2d import kwargs_func_prob, kwargs_func_prob_mag
 from augpolicies.augmentation_funcs.augmentation_2d import apply_random_left_right_flip, apply_random_up_down_flip
 from augpolicies.augmentation_policies.baselines import HalfAugmentationPolicy
-from augpolicies.core.util.parse_args import get_dataset_from_args, get_config_json
+from augpolicies.core.util.parse_args import get_args
 
 
 set_tf_memory_growth_for_system()
-dataset = get_dataset_from_args()
-config = get_config_json()
+args = get_args()
+dataset = args.config
+config = args.dataset
 
-start_time = datetime.now().strftime('%m-%d-%Y_%H-%M-%S')
 task = os.path.splitext(os.path.basename(__file__))[0]
 
-results_path = f"data/results/{task}/{start_time}/"
+results_path = f"data/results/{task}/{config['log_id']}/"
 results_file = os.path.join(results_path, "summary_results.csv")
 
 try:
