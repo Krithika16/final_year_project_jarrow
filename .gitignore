@@ -131,9 +131,6 @@ dmypy.json
 # VScode
 .vscode/
 
-# logs
-logs/
-
 #data
 *.csv
 *.json
