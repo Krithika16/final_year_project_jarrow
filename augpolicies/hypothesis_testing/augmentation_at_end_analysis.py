@@ -3,60 +3,62 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
-file_path = "data/results/aug_at_end/"
 
-df = pd.read_csv(os.path.join(file_path, "aug_at_end.csv"))
+def main(args):
+    file_path = "data/results/aug_at_end/"
 
-from augpolicies.core.util.parse_args import get_dataset_from_args
-dataset = get_dataset_from_args()
-try:
-    df = df[df['dataset' == dataset.__name__]]
-except KeyError:
-    pass
+    df = pd.read_csv(os.path.join(file_path, "aug_at_end.csv"))
 
-policies = df.policy_name.unique()
+    from augpolicies.core.util.parse_args import get_dataset_from_args
+    dataset = get_dataset_from_args()
+    try:
+        df = df[df['dataset' == dataset.__name__]]
+    except KeyError:
+        pass
 
-augs = df.aug.unique()
-models = df.model.unique()
+    policies = df.policy_name.unique()
 
-pt = pd.pivot_table(df, values=['val_acc'], index=['policy_name', 'aug', 'model', 'e_augs'])
-pt_var = pd.pivot_table(df, values=['val_acc'], index=['policy_name', 'aug', 'model', 'e_augs'], aggfunc=np.std)
+    augs = df.aug.unique()
+    models = df.model.unique()
 
-f, ax = plt.subplots(nrows=len(models), ncols=len(augs), sharey='all', sharex='all')
+    pt = pd.pivot_table(df, values=['val_acc'], index=['policy_name', 'aug', 'model', 'e_augs'])
+    pt_var = pd.pivot_table(df, values=['val_acc'], index=['policy_name', 'aug', 'model', 'e_augs'], aggfunc=np.std)
 
-for a_idx, a in enumerate(augs):
-    for m_idx, m in enumerate(models):
-        for p in policies:
-            a_ = None
-            if len(augs) == 1 and len(models) == 1:
-                a_ = ax
-            elif len(augs) == 1:
-                a_ = ax[m_idx]
-            elif len(models) == 1:
-                a_ = ax[a_idx]
-            else:
-                a_ = ax[m_idx, a_idx]
-            try:
-                x = pt.loc[p, a, m].index
-                y = pt.loc[p, a, m].val_acc
-                err = pt_var.loc[p, a, m].val_acc
-                if len(y) == len(err):
-                    a_.errorbar(x=x, y=y, yerr=err, label=f"{a}_{p}", marker='o', capsize=5, elinewidth=0.3, markeredgewidth=1)
+    f, ax = plt.subplots(nrows=len(models), ncols=len(augs), sharey='all', sharex='all')
+
+    for a_idx, a in enumerate(augs):
+        for m_idx, m in enumerate(models):
+            for p in policies:
+                a_ = None
+                if len(augs) == 1 and len(models) == 1:
+                    a_ = ax
+                elif len(augs) == 1:
+                    a_ = ax[m_idx]
+                elif len(models) == 1:
+                    a_ = ax[a_idx]
                 else:
-                    raise KeyError
-            except KeyError:
+                    a_ = ax[m_idx, a_idx]
                 try:
-                    a_.plot(x, y, label=f"{a}_{p}")
+                    x = pt.loc[p, a, m].index
+                    y = pt.loc[p, a, m].val_acc
+                    err = pt_var.loc[p, a, m].val_acc
+                    if len(y) == len(err):
+                        a_.errorbar(x=x, y=y, yerr=err, label=f"{a}_{p}", marker='o', capsize=5, elinewidth=0.3, markeredgewidth=1)
+                    else:
+                        raise KeyError
                 except KeyError:
-                    pass
+                    try:
+                        a_.plot(x, y, label=f"{a}_{p}")
+                    except KeyError:
+                        pass
 
-            if m_idx == 0:
-                a_.title.set_text(a)
-            if a_idx == (len(augs) - 1):
-                a_.yaxis.set_label_position("right")
-                a_.set_ylabel(m)
-                a_.legend()
+                if m_idx == 0:
+                    a_.title.set_text(a)
+                if a_idx == (len(augs) - 1):
+                    a_.yaxis.set_label_position("right")
+                    a_.set_ylabel(m)
+                    a_.legend()
 
-plt.tight_layout()
-plt.savefig(os.path.join(file_path, "aug_at_end"))
-plt.show()
+    plt.tight_layout()
+    plt.savefig(os.path.join(file_path, "aug_at_end"))
+    plt.show()

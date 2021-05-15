@@ -9,49 +9,6 @@ from scipy.stats import rankdata, pearsonr
 from sklearn.metrics import mean_squared_error
 
 
-file_path = "data/results/aug_comparison/"
-
-df = pd.read_csv(os.path.join(file_path, "aug_comparison.csv"))
-
-dataset = get_dataset_from_args()
-try:
-    df = df[df['dataset' == dataset.__name__]]
-except KeyError:
-    pass
-
-e_total = 40
-
-df = df[df['e'] == e_total]
-
-# df = df.head(10)
-
-val_losses = []
-train_names = []
-
-for idx, row in df.iterrows():
-    current_json = os.path.join(file_path, f"{row['results_tag']}.json")
-    with open(current_json, "r") as f:
-        data = json.load(f)
-    losses_mask = [np.nan] * e_total
-    losses = data['val_losses']
-    losses_mask[:len(losses)] = losses
-    losses = losses_mask
-    best_loss = data['best_val_loss']['loss']
-    name = f"{row['aug']}_{row['prob']}_{row['mag']}"
-    losses.append(best_loss)
-    val_losses.append(losses)
-    train_names.append(name)
-
-# pad with nans
-
-val_losses = np.array(val_losses)
-val_losses_ranked = np.zeros_like(val_losses)
-
-for col_num in range(val_losses.shape[1]):
-    ranked = rankdata(val_losses[:, col_num], method='min')
-    val_losses_ranked[:, col_num] = ranked
-
-
 def calculate_lwma_rank(ranks, f=1):
     lwma_num = 0
     divisor = 0
@@ -128,87 +85,131 @@ def get_errors_for_data_proportion(data_to_skip, val_losses_ranked, fs=[1], ks=[
     return errors, top_errors, names
 
 
-errors = []
-top_errors = []
-n = None
-for i in reversed(range(val_losses_ranked.shape[1] - 1)):
-    err, t10_err, n = get_errors_for_data_proportion(i, val_losses_ranked, fs=np.arange(0.7, 1.4, 0.1), ks=np.arange(0.1, 1.1, 0.1))
-    errors.append(err)
-    top_errors.append(t10_err)
+def main(args):
+    file_path = "data/results/aug_comparison/"
 
-errors = np.array(errors)
+    df = pd.read_csv(os.path.join(file_path, "aug_comparison.csv"))
 
-cm = plt.get_cmap('nipy_spectral')
-NUM_COLORS = len(n)
-plt.gca().set_prop_cycle('color', [cm(1. * i / NUM_COLORS) for i in range(NUM_COLORS)])
+    dataset = get_dataset_from_args()
+    try:
+        df = df[df['dataset' == dataset.__name__]]
+    except KeyError:
+        pass
 
-for col in range(errors.shape[1]):
-    if col != 0:
-        plt.plot(errors[:, col], label=n[col])
-plt.title("Analysis of Estimation of Rank")
-plt.ylabel("MSE")
-plt.xlabel("Epoch")
-plt.legend()
-plt.yscale("log")
-plt.savefig(os.path.join(file_path, "aug_comparison_ranking"))
+    e_total = 40
 
-plt.figure()
+    df = df[df['e'] == e_total]
 
-top_errors = np.array(top_errors)
+    # df = df.head(10)
 
-cm = plt.get_cmap('nipy_spectral')
-NUM_COLORS = len(n)
-plt.gca().set_prop_cycle('color', [cm(1. * i / NUM_COLORS) for i in range(NUM_COLORS)])
+    val_losses = []
+    train_names = []
 
-for col in range(top_errors.shape[1]):
-    if col != 0:
-        plt.plot(top_errors[:, col], label=n[col])
-plt.legend()
-plt.title("Analysis of Estimation of Top Ranked")
-plt.ylabel("MSE")
-plt.xlabel("Epoch")
-plt.yscale("log")
-plt.savefig(os.path.join(file_path, "aug_comparison_top_ranking"))
+    for idx, row in df.iterrows():
+        current_json = os.path.join(file_path, f"{row['results_tag']}.json")
+        with open(current_json, "r") as f:
+            data = json.load(f)
+        losses_mask = [np.nan] * e_total
+        losses = data['val_losses']
+        losses_mask[:len(losses)] = losses
+        losses = losses_mask
+        best_loss = data['best_val_loss']['loss']
+        name = f"{row['aug']}_{row['prob']}_{row['mag']}"
+        losses.append(best_loss)
+        val_losses.append(losses)
+        train_names.append(name)
 
-fig, axes = plt.subplots(5, 1)
+    # pad with nans
 
-NUM_COLORS = 5
+    val_losses = np.array(val_losses)
+    val_losses_ranked = np.zeros_like(val_losses)
 
-for ax_idx, ax in enumerate(axes):
-    percent_of_data = (ax_idx+1)/len(axes)
-    runs = val_losses[:, :-1]
-    slice_e = int(runs.shape[1] * percent_of_data)
-    runs = runs[:, :slice_e]
+    for col_num in range(val_losses.shape[1]):
+        ranked = rankdata(val_losses[:, col_num], method='min')
+        val_losses_ranked[:, col_num] = ranked
 
-    best_losses_of_quarter = np.nanmin(runs, axis=-1)
 
-    cm = plt.get_cmap('gist_rainbow')
-    ax.set_prop_cycle('color', [cm(1. * i / NUM_COLORS) for i in range(NUM_COLORS)])
+    errors = []
+    top_errors = []
+    n = None
+    for i in reversed(range(val_losses_ranked.shape[1] - 1)):
+        err, t10_err, n = get_errors_for_data_proportion(i, val_losses_ranked, fs=np.arange(0.7, 1.4, 0.1), ks=np.arange(0.1, 1.1, 0.1))
+        errors.append(err)
+        top_errors.append(t10_err)
 
-    if ax_idx == (len(axes) - 1):
-        assert np.array_equal(val_losses[:, -1], best_losses_of_quarter)
+    errors = np.array(errors)
 
-    sorted_idxes = np.argsort(best_losses_of_quarter)
-    train_names = np.array(train_names)
+    cm = plt.get_cmap('nipy_spectral')
+    NUM_COLORS = len(n)
+    plt.gca().set_prop_cycle('color', [cm(1. * i / NUM_COLORS) for i in range(NUM_COLORS)])
 
-    for idx, (data, label) in enumerate(zip(val_losses[sorted_idxes], train_names[sorted_idxes])):
-        c = None
-        if idx < 5:
-            alpha = 1.
-        elif idx < NUM_COLORS:
-            alpha = 0.8
-        else:
-            alpha = 0.05
-            c = "blue"
-        ax.plot(data, label=label, alpha=alpha, color=c)
+    for col in range(errors.shape[1]):
+        if col != 0:
+            plt.plot(errors[:, col], label=n[col])
+    plt.title("Analysis of Estimation of Rank")
+    plt.ylabel("MSE")
+    plt.xlabel("Epoch")
+    plt.legend()
+    plt.yscale("log")
+    plt.savefig(os.path.join(file_path, "aug_comparison_ranking"))
 
-    ax.axvline(x=slice_e, color="red")
+    plt.figure()
 
-    ax.legend(train_names[sorted_idxes][:NUM_COLORS])
-    ax.set_yscale('log')
-    ax.title.set_text(f"Top performing trials over the first {percent_of_data * 100:.0f}% of each trial")
-    ax.set_xlabel("MSE")
-    ax.set_ylabel("Epoch")
+    top_errors = np.array(top_errors)
 
-plt.savefig(os.path.join(file_path, "aug_comparison_time_ranking"))
-plt.show()
+    cm = plt.get_cmap('nipy_spectral')
+    NUM_COLORS = len(n)
+    plt.gca().set_prop_cycle('color', [cm(1. * i / NUM_COLORS) for i in range(NUM_COLORS)])
+
+    for col in range(top_errors.shape[1]):
+        if col != 0:
+            plt.plot(top_errors[:, col], label=n[col])
+    plt.legend()
+    plt.title("Analysis of Estimation of Top Ranked")
+    plt.ylabel("MSE")
+    plt.xlabel("Epoch")
+    plt.yscale("log")
+    plt.savefig(os.path.join(file_path, "aug_comparison_top_ranking"))
+
+    fig, axes = plt.subplots(5, 1)
+
+    NUM_COLORS = 5
+
+    for ax_idx, ax in enumerate(axes):
+        percent_of_data = (ax_idx+1)/len(axes)
+        runs = val_losses[:, :-1]
+        slice_e = int(runs.shape[1] * percent_of_data)
+        runs = runs[:, :slice_e]
+
+        best_losses_of_quarter = np.nanmin(runs, axis=-1)
+
+        cm = plt.get_cmap('gist_rainbow')
+        ax.set_prop_cycle('color', [cm(1. * i / NUM_COLORS) for i in range(NUM_COLORS)])
+
+        if ax_idx == (len(axes) - 1):
+            assert np.array_equal(val_losses[:, -1], best_losses_of_quarter)
+
+        sorted_idxes = np.argsort(best_losses_of_quarter)
+        train_names = np.array(train_names)
+
+        for idx, (data, label) in enumerate(zip(val_losses[sorted_idxes], train_names[sorted_idxes])):
+            c = None
+            if idx < 5:
+                alpha = 1.
+            elif idx < NUM_COLORS:
+                alpha = 0.8
+            else:
+                alpha = 0.05
+                c = "blue"
+            ax.plot(data, label=label, alpha=alpha, color=c)
+
+        ax.axvline(x=slice_e, color="red")
+
+        ax.legend(train_names[sorted_idxes][:NUM_COLORS])
+        ax.set_yscale('log')
+        ax.title.set_text(f"Top performing trials over the first {percent_of_data * 100:.0f}% of each trial")
+        ax.set_xlabel("MSE")
+        ax.set_ylabel("Epoch")
+
+    plt.savefig(os.path.join(file_path, "aug_comparison_time_ranking"))
+    plt.show()
