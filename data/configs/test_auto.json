@@ -1,6 +1,6 @@
 {
     "strategy": null,
-    "epochs": 5,
+    "epochs": 3,
     "e_stop": 3,
     "batch_size": 256,
     "repeats": 1,
@@ -22,6 +22,6 @@
         ]
     },
     "models": [
-        "SimpleModel", "EfficientNetB0"
+        "SimpleModel", "ConvModel"
     ]
 }
