@@ -30,11 +30,19 @@ def get_classification_data(dataset=tf.keras.datasets.fashion_mnist.load_data, v
     return train, val, test
 
 
-def get_and_compile_model(model_func, lr=0.001, from_logits=True):
+def get_and_compile_model(model_func, loss=None, optimizer=None, lr=0.001, from_logits=True):
+    if loss is None:
+        loss = tf.keras.losses.SparseCategoricalCrossentropy(
+            from_logits=from_logits,
+            reduction=tf.keras.losses.Reduction.NONE
+        )
+    if optimizer is None:
+        optimizer = tf.keras.optimizers.Adam(lr=lr)
+
     model = model_func()
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(lr=lr),
-        loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=from_logits),
+        optimizer=optimizer,
+        loss=loss,
         metrics=['accuracy'],
     )
     return model

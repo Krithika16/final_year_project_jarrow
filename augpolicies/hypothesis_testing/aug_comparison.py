@@ -48,8 +48,8 @@ lr_decay = get_lr_decay_closure(config['epochs'], config['lr']['decay'],
                                 warmup_proportion=config['lr']['warmup_prop'])
 
 for _ in range(config['repeats']):
-    for i in range(4):
-        for m in config['models']:
+    for m in config['models']:
+        for i in range(4):
             t1 = time.time()
             p = NoAugmentationPolicy()
             with open(results_file) as f:
@@ -76,8 +76,8 @@ for _ in range(config['repeats']):
         mag = 0.0
 
         if (aug is apply_random_left_right_flip) or (aug is apply_random_up_down_flip) or (aug is apply_no_aug):
-            for prob_f in range(4):
-                for m in config['models']:
+            for m in config['models']:
+                for prob_f in range(4):
                     _prob = 0.25 * (prob_f + 1)
                     _mag = 1.0
                     t1 = time.time()
@@ -102,9 +102,9 @@ for _ in range(config['repeats']):
                     with open(os.path.join(results_path, "episode", f"{h['file_name']}.json"), "w") as f:
                         json.dump(h, f, indent=4)
         else:
-            for mag_f in range(5):
-                for prob_f in range(2):
-                    for m in config['models']:
+            for m in config['models']:
+                for mag_f in range(5):
+                    for prob_f in range(2):
                         aug_ = aug
                         _mag = 0.0 + (0.25 * mag_f)
                         _prob = 0.5 + (0.5 * prob_f)

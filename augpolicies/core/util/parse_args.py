@@ -33,5 +33,6 @@ def get_config_json():
     config['models'] = parse_list(config['models'], parse_model)
     config['strategy'] = parse_strategy(config['strategy'])
     config['strategy_str'] = str(config['strategy'])
+    config['num_replicas'] = config['strategy'].num_replicas_in_sync
     config['host_machine'] = os.getenv("HOST_HOSTNAME").upper()
     return config

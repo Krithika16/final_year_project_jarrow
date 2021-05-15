@@ -6,55 +6,71 @@ from augpolicies.core.classification import get_and_compile_model, get_classific
 from augpolicies.core.util.reshape import make_3d, pad_to_min_size
 
 
-def get_train_step_fn(strategy):
-    with strategy.scope():
-        @tf.function
-        def train_step(model, inputs, targets, optimizer, loss_func):
-            with tf.GradientTape() as tape:
-                pred = model(inputs, training=True)
-                loss = loss_func(targets, pred)
-            gradients = tape.gradient(loss, model.trainable_variables)
-            optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-            return loss, pred
+def get_train_step_fn(model, optimizer, loss_func, acc_metric):
+    def train_step(inputs):
+        x, y = inputs
+        with tf.GradientTape() as tape:
+            y_pred = model(x, training=True)
+            loss = loss_func(y, y_pred)
+        gradients = tape.gradient(loss, model.trainable_variables)
+        optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+        acc_metric.update_state(y, y_pred)  # accuracy metric
+        return loss
     return train_step
 
 
-def get_val_step_fn(strategy):
-    with strategy.scope():
-        @tf.function
-        def val_step(model, inputs, targets, loss_func):
-            pred = model(inputs, training=False)
-            loss = loss_func(targets, pred)
-            return loss, pred
+def get_distributed_train_step_fn(train_step):
+    @tf.function
+    def distributed_train_step(strategy, inputs):
+        per_replica_losses = strategy.run(train_step, args=(inputs,))
+        return strategy.reduce(tf.distribute.ReduceOp.MEAN, per_replica_losses, axis=-1)
+    return distributed_train_step
+
+
+def get_val_step_fn(model, loss_func, loss_metric, acc_metric):
+    def val_step(inputs):
+        x,y = inputs
+        y_pred = model(x, training=False)
+        loss = loss_func(y, y_pred)
+        loss_metric.update_state(loss)
+        acc_metric.update_state(y, y_pred)
     return val_step
 
 
-def eval_loop(val_ds, model, loss, val_step_fn):
-    e_val_loss_avg = tf.keras.metrics.Mean()
-    e_val_acc = tf.keras.metrics.SparseCategoricalAccuracy()
-    for x, y in val_ds:
-        val_loss, val_pred = val_step_fn(model, x, y, loss)
-        e_val_loss_avg.update_state(val_loss)
-        e_val_acc.update_state(y, val_pred)
-    return e_val_loss_avg.result(), e_val_acc.result()
+def get_distributed_val_step_fn(val_step):
+    @tf.function
+    def distributed_val_step(strategy, inputs):
+        return strategy.run(val_step, args=(inputs,))
+    return distributed_val_step
 
 
-def get_epoch_fn(strategy):
-    with strategy.scope():
-        def epoch(train_ds, val_ds, model,
-                  augmentation_policy, epoch_number,
-                  train_step_fn, val_step_fn,
-                  loss, optimizer):
-            e_loss_avg = tf.keras.metrics.Mean()
-            e_acc = tf.keras.metrics.SparseCategoricalAccuracy()
-            for x, y in train_ds:
-                if augmentation_policy is not None:
-                    x, y = augmentation_policy((x, y, epoch_number))
-                tr_loss, tr_pred = train_step_fn(model, x, y, optimizer, loss)
-                e_loss_avg.update_state(tr_loss)
-                e_acc.update_state(y, tr_pred)
-            e_val_loss_avg, e_val_acc = eval_loop(val_ds, model, loss, val_step_fn)
-            return e_loss_avg.result(), e_val_loss_avg, e_acc.result(), e_val_acc
+def get_eval_loop_fn(distributed_val_step_fn,  val_loss_metric, val_acc_metric):
+
+    def eval_loop(strategy, val_ds):
+        for inputs in val_ds:
+            distributed_val_step_fn(strategy, inputs)
+        val_loss = val_loss_metric.result()
+        val_acc = val_acc_metric.result()
+        val_loss_metric.reset_states()
+        val_acc_metric.reset_states()
+        return val_loss, val_acc
+    return eval_loop
+
+def get_epoch_fn(distributed_train_step_fn, eval_loop_fn,
+                 train_acc_metric,):
+    
+    def epoch(strategy, train_ds, val_ds,
+              augmentation_policy, epoch_number):
+        train_loss = 0.0
+        for inputs in train_ds:
+            if augmentation_policy is not None:
+                inputs = augmentation_policy((*inputs, epoch_number))
+            train_loss += distributed_train_step_fn(strategy, inputs)
+        val_loss, val_acc = eval_loop_fn(strategy, val_ds)
+
+        train_acc = train_acc_metric.result()
+        train_acc_metric.reset_states()
+        return train_loss, val_loss, train_acc, val_acc
     return epoch
 
 
@@ -112,7 +128,14 @@ def supervised_train_loop(model_template, dataset, id_tag, strategy, *,
     train_val_acc_results = []
 
     with strategy.scope():
-        model = get_and_compile_model(model_template)
+        model = get_and_compile_model(model_template, loss, optimizer)
+        val_loss_metric = tf.keras.metrics.Mean(name='val_loss')
+        train_acc_metric= tf.keras.metrics.SparseCategoricalAccuracy(
+            name='train_acc'
+        )
+        val_acc_metric = tf.keras.metrics.SparseCategoricalAccuracy(
+            name='val_acc'
+        )
 
     train, val, _ = get_data_func(dataset=dataset)
     if model.requires_3d:
@@ -126,31 +149,30 @@ def supervised_train_loop(model_template, dataset, id_tag, strategy, *,
     train_ds = train_ds.shuffle(buffer_size=1024).batch(batch_size)
     val_ds = tf.data.Dataset.from_tensor_slices(val).batch(batch_size)
 
-    # strategy functions
     train_ds = strategy.experimental_distribute_dataset(train_ds)
     val_ds = strategy.experimental_distribute_dataset(val_ds)
-    train_step_fn = get_train_step_fn(strategy)
-    val_step_fn = get_val_step_fn(strategy)
-    epoch = get_epoch_fn(strategy)
+
+    train_step = get_train_step_fn(model, model.optimizer, model.loss, train_acc_metric)
+    val_step = get_val_step_fn(model, model.loss, val_loss_metric, val_acc_metric)
+    dist_train_step = get_distributed_train_step_fn(train_step)
+    dist_val_step = get_distributed_val_step_fn(val_step)
+    eval_loop = get_eval_loop_fn(dist_val_step, val_loss_metric, val_acc_metric)
+
+    epoch = get_epoch_fn(dist_train_step, eval_loop,
+                         train_acc_metric)
 
     best_loss = np.inf
     best_loss_at = -1
-
-    if optimizer is None:
-        optimizer = model.optimizer
-    if loss is None:
-        loss = model.loss
 
     t0 = time.time()
     for e in range(epochs):
 
         if lr_decay:
-            lr = lr_decay(e, best_loss_at, optimizer.learning_rate)
-            optimizer.learning_rate = lr
+            lr = lr_decay(e, best_loss_at, model.optimizer.learning_rate)
+            model.optimizer.learning_rate = lr
 
-        e_loss_avg, e_val_loss_avg, e_acc, e_val_acc = epoch(train_ds, val_ds, model, augmentation_policy, e,
-                                                             train_step_fn, val_step_fn,
-                                                             loss=loss, optimizer=optimizer)
+        e_loss_avg, e_val_loss_avg, e_acc, e_val_acc = epoch(strategy, train_ds, val_ds,
+                                                             augmentation_policy, e)
 
         train_loss_results.append(e_loss_avg.numpy().tolist())
         train_val_loss_results.append(e_val_loss_avg.numpy().tolist())
@@ -163,14 +185,14 @@ def supervised_train_loop(model_template, dataset, id_tag, strategy, *,
         if debug:
             print(f"{e+1:03d}/{epochs:03d}: Loss: {train_loss_results[-1]:.3f},",
                   f"Val Loss: {train_val_loss_results[-1]:.3f}, Acc: {train_acc_results[-1]:.3f},",
-                  f"Val Acc: {train_val_acc_results[-1]:.3f}, Time so far: {time.time() - t0:.1f}, Lr: {optimizer.lr.numpy():.5f}, Since Best: {e - best_loss_at}")
+                  f"Val Acc: {train_val_acc_results[-1]:.3f}, Time so far: {time.time() - t0:.1f}, Lr: {model.optimizer.lr.numpy():.5f}, Since Best: {e - best_loss_at}")
         if early_stop:
             if e - best_loss_at >= early_stop:
                 if debug:
                     print("Early stopping at:", e + 1)
                     break
     if debug:
-        eval_loss, eval_acc = eval_loop(train_ds, model, loss, val_step_fn)
+        eval_loss, eval_acc = eval_loop(strategy, train_ds)
         tf.print(f"No Aug Loss: {eval_loss:.3f}, No Aug Acc: {eval_acc:.3f}, Duration: {time.time() - t0:.1f}, E: {e + 1}")
 
     history['train_losses'] = train_loss_results
@@ -187,8 +209,8 @@ def supervised_train_loop(model_template, dataset, id_tag, strategy, *,
     history['file_name'] = f"{id_tag}_{datetime.now().strftime('%m-%d-%Y_%H-%M-%S')}"
 
     history['strategy_str'] = str(strategy)
-    history['loss'] = loss.name
-    history['optimizer'] = str(optimizer)
+    history['loss'] = model.loss.name
+    history['optimizer'] = str(model.optimizer)
     history['early_stop'] = early_stop if early_stop else "NA"
     history['batch_size'] = batch_size
     history['lr_decay'] = lr_decay.config if lr_decay else "NA"

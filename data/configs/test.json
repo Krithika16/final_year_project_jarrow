@@ -1,5 +1,5 @@
 {
-    "strategy": "default",
+    "strategy": "gpu1",
     "epochs": 40,
     "e_stop": 10,
     "batch_size": 256,

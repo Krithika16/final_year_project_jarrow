@@ -14,6 +14,7 @@ RUN pip install pytest
 RUN pip install matplotlib
 RUN pip install flake8
 RUN pip install jupyterlab
+RUN pip install future-breakpoint
 
 RUN apt-get update
 RUN apt-get install -y tmux
