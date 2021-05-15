@@ -1,9 +1,9 @@
 {
     "strategy": null,
-    "epochs": 4,
+    "epochs": 5,
     "e_stop": 10,
     "batch_size": 256,
-    "repeats": 10,
+    "repeats": 3,
     "lr": {
         "decay": 4,
         "decay_factor": 0.5,
@@ -18,20 +18,14 @@
         "num_to_apply": 1,
         "choices": [
             "apply_random_left_right_flip",
-            "apply_random_up_down_flip",
             "apply_random_contrast",
             "apply_random_skew",
             "apply_random_zoom",
-            "apply_random_x_skew",
-            "apply_random_y_skew",
-            "apply_random_x_zoom",
-            "apply_random_y_zoom",
             "apply_random_brightness",
-            "apply_random_rotate",
-            "apply_random_cutout"
+            "apply_random_rotate"
         ]
     },
     "models": [
-        "SimpleModel", "ConvModel", "EfficientNetB0"
+        "SimpleModel", "EfficientNetB0"
     ]
 }
