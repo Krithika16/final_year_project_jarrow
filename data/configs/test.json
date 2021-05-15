@@ -1,0 +1,31 @@
+{
+    "strategy": "default",
+    "epochs": 40,
+    "e_stop": 10,
+    "batch_size": 256,
+    "repeats": 10,
+    "lr": {
+        "decay": 4,
+        "decay_factor": 0.5,
+        "warmup": 1e-5,
+        "start": 3e-3,
+        "min": 1e-5,
+        "warmup_prop": 0.1
+    },
+    "aug": {
+        "prob": 1.0,
+        "mag": 0.2,
+        "num_to_apply": 1,
+        "choices": [
+            "apply_random_left_right_flip",
+            "apply_random_contrast",
+            "apply_random_skew",
+            "apply_random_zoom",
+            "apply_random_brightness",
+            "apply_random_rotate"
+        ]
+    },
+    "models": [
+        "SimpleModel", "EfficientNetB0"
+    ]
+}
