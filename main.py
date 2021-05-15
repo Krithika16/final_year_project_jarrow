@@ -30,5 +30,5 @@ except (SystemExit, KeyboardInterrupt):
     raise
 except Exception as exception:
     logger.error('Exception:', exc_info=True)
-
-logger.info("Complete.")
+else:
+    logger.info("Complete.")
