@@ -15,8 +15,8 @@ from augpolicies.core.util.parse_args import get_args
 
 set_tf_memory_growth_for_system()
 args = get_args()
-dataset = args.config
-config = args.dataset
+config = args.config
+dataset = args.dataset
 
 task = os.path.splitext(os.path.basename(__file__))[0]
 
