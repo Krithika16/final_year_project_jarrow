@@ -66,6 +66,8 @@ def parse_list(strs, parse_func):
 def parse_strategy(strat_str):
     if strat_str is None:
         return get_strategy_for_system()
+    elif strat_str == "default":
+        return tf.distribute.get_strategy()
     elif strat_str == "gpu1":
         return tf.distribute.OneDeviceStrategy("/gpu:0")
     elif strat_str == "gpu2":
