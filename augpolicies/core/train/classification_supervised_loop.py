@@ -63,10 +63,7 @@ def get_epoch_fn(distributed_train_step_fn, eval_loop_fn,
         train_loss = 0.0
         for inputs in train_ds:
             if augmentation_policy is not None:
-                inputs = strategy.run(
-                    augmentation_policy,
-                    args=(*inputs, epoch_number,)
-                )
+                inputs = augmentation_policy(*inputs, epoch_number)
             train_loss += distributed_train_step_fn(strategy, inputs)
         val_loss, val_acc = eval_loop_fn(strategy, val_ds)
 
