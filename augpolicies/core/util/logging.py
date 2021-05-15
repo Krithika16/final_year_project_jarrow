@@ -1,8 +1,14 @@
 import logging
+import os
 
 def get_logger(args):
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
+
+    try:
+        os.makedirs("logs")
+    except FileExistsError:
+        pass
 
     handler = logging.FileHandler(args.config['log_path'])
     handler.setLevel(logging.INFO)

@@ -56,7 +56,9 @@ def kwargs_func_prob_mag(
 
 
 def enforce_rank(image):
-    assert len(image.shape) == 4, f"NHWC format required, observed rank: {len(image.shape)} for shape: {image.shape}"
+    breakpoint()
+    print(tf.shape(image))
+    assert tf.rank(image) == 4, f"NHWC format required, observed rank: {tf.rank(image)} for shape: {tf.shape(image)}"
 
 
 # no aug

@@ -45,7 +45,6 @@ def get_distributed_val_step_fn(val_step):
 
 
 def get_eval_loop_fn(distributed_val_step_fn,  val_loss_metric, val_acc_metric):
-
     def eval_loop(strategy, val_ds):
         for inputs in val_ds:
             distributed_val_step_fn(strategy, inputs)
@@ -56,15 +55,18 @@ def get_eval_loop_fn(distributed_val_step_fn,  val_loss_metric, val_acc_metric):
         return val_loss, val_acc
     return eval_loop
 
+
 def get_epoch_fn(distributed_train_step_fn, eval_loop_fn,
                  train_acc_metric,):
-    
     def epoch(strategy, train_ds, val_ds,
               augmentation_policy, epoch_number):
         train_loss = 0.0
         for inputs in train_ds:
             if augmentation_policy is not None:
-                inputs = augmentation_policy((*inputs, epoch_number))
+                inputs = strategy.run(
+                    augmentation_policy,
+                    args=(*inputs, epoch_number,)
+                )
             train_loss += distributed_train_step_fn(strategy, inputs)
         val_loss, val_acc = eval_loop_fn(strategy, val_ds)
 
